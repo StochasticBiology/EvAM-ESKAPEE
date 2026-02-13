@@ -128,30 +128,32 @@ int.df
 ##### here are some ways we could regularise these interaction models
 
 # start penalised HyperTraPS with the HyperHMM initial params
-trial = l2rep[nrow(l2rep),]
-this.m = as.matrix(final_df[final_df$eskapee == bug,3:ncol(final_df)])
-ht.fit = HyperTraPS(this.m, initialparams=trial, 
-                    length=4, kernel=3, penalty=1)
-ht.fit$featurenames = drug.labels
-plot_hyperinf(ht.fit)
-plotHypercube.lik.trace(ht.fit)
-plotHypercube.influencegraph(ht.fit, cv.thresh = 0.5)
+ht.fits = ht.int.graphs = list()
+for(bug in ESKAPEE) {
+  l2rep = full_to_squared(fit[[bug]])
+  trial = l2rep[1,]
+  this.m = as.matrix(final_df[final_df$eskapee == bug,3:ncol(final_df)])
+  ht.fit[[bug]] = HyperTraPS(this.m, initialparams=trial, 
+                             length=3, kernel=4, penalty=1)
+  ht.fit[[bug]]$featurenames = drug.labels
+  ht.int.graphs[[bug]] = plotHypercube.influencegraph(ht.fit[[bug]], 
+                                                      cv.thresh = 0.5)
+}
+for(bug in ESKAPEE) {
+  ht.int.graphs[[bug]] = plotHypercube.influencegraph(ht.fit[[bug]], 
+                                                      cv.thresh = 0.25)
+}
+ggarrange(plotlist=ht.int.graphs)
 
-## can we -- awkwardly -- pass exactly these params to HyperTraPS and regularise? 
-trial = l2rep[nrow(l2rep),]
-priors = cbind(matrix(trial, ncol=1), matrix(trial+1e-3, ncol=1))
-this.m = as.matrix(final_df[final_df$eskapee == bug,3:ncol(final_df)])
-try.fit.0 = HyperTraPS(this.m, priors=priors, length=1)
-try.fit = HyperTraPS(this.m, priors=priors, length=1, regularise=1)
-plotHypercube.regularisation(try.fit)
+# should do diagnostics
+#plot_hyperinf(ht.fit)
+#plotHypercube.lik.trace(ht.fit[1])
+#plotHypercube.influencegraph(ht.fit, cv.thresh = 0.5)
 
-ggarrange(fit.plot[[length(fit.plot)-1]],
-plot_hyperinf(try.fit.0),
-plot_hyperinf(try.fit))
 
 ###########
 
-# don't trust these interactions -- overfitting likely from HyperHMM
+# don't trust these uncorrected interactions -- overfitting likely from HyperHMM
 
 ggplot(int.df[abs(int.df$mean) > 0.5,], aes(x=i, y=j, fill=mean)) + 
   geom_tile() + geom_abline() + facet_wrap(~ bug)
