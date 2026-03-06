@@ -11,7 +11,7 @@ library(ggpubr)
 
 system("wget https://ftp.ebi.ac.uk/pub/databases/amr_portal/releases/2025-11/phenotype.parquet")
 df = read_parquet("phenotype.parquet")
-expt = 2
+expt = 0
 
 if(expt == 0) {
   ESKAPEE = c("Escherichia coli", "Klebsiella pneumoniae", "Staphylococcus aureus", 
@@ -29,6 +29,13 @@ if(expt == 1) {
 if(expt == 2) {
   ESKAPEE = c("Escherichia coli", "Klebsiella pneumoniae", "Acinetobacter baumannii")
   to.get = 9
+}
+
+if(expt == 3) {
+  ESKAPEE = c("Escherichia coli", "Klebsiella pneumoniae", 
+              "Acinetobacter baumannii", 
+              "Enterobacter")
+  to.get = 7
 }
 
 df$eskapee = df$species
@@ -66,7 +73,7 @@ drugs = appears$drug[1:to.get]
 # pull the resistance profiles for these drugs into a wide dataframe 
 wide_all <- tmp[tmp$antibiotic_name %in% drugs,] %>%
   pivot_wider(names_from = antibiotic_name,
-              values_from = value) %>%
+              values_from = value)  %>%
   drop_na()
 
 # output specifics
@@ -80,12 +87,44 @@ fit = fit.plot = list()
 for(bug in ESKAPEE) {
   this.df = final_df[final_df$eskapee == bug,c(1,3:ncol(final_df))]
   fit[[bug]] = hyperinf(this.df, boot.parallel = 10)
+  #fit[[bug]] = hyperinf(this.df)
   fit.plot[[bug]] = plot_hyperinf(fit[[bug]]) + theme(legend.position="none")
 }
 drug.labels = colnames(final_df[3:ncol(final_df)])
 drug.labels
 plot.drugs = ggtexttable(data.frame(Drug=drug.labels))
 fit.plot[[length(fit.plot)+1]] = plot.drugs
+
+bootset = c(fit[[1]]$boots, fit[[2]]$boots)
+
+png(paste0("eskapee-expt-", expt, "-compare-boot.png", collapse=""),
+    width=800*sf, height=400*sf, res=72*sf)
+print(
+  ggarrange(
+    plot_hyperinf_comparative(bootset, expt.names = rep(ESKAPEE, each=11),
+                              feature.names = substr(drug.labels, start=1, stop=3))  +
+      theme(legend.position="none")
+    ,
+    plot_hyperinf_bubbles(bootset, expt.names = rep(ESKAPEE, each=11),
+                          feature.names = substr(drug.labels, start=1, stop=3))
+    , widths=c(1,2)
+  )
+)
+dev.off()
+
+png(paste0("eskapee-expt-", expt, "-compare.png", collapse=""),
+    width=800*sf, height=400*sf, res=72*sf)
+print(
+  ggarrange(
+    plot_hyperinf_comparative(fit, expt.names = ESKAPEE,
+                              feature.names = substr(drug.labels, start=1, stop=3)) +
+      theme(legend.position="none"),
+    plot_hyperinf_bubbles(fit, expt.names = ESKAPEE,
+                          feature.names = substr(drug.labels, start=1, stop=3)),
+    widths=c(1,2)
+  )
+)
+dev.off()
 
 png(paste0("eskapee-expt-", expt, "-networks.png", collapse=""),
     width=800*sf, height=800*sf, res=72*sf)
@@ -144,6 +183,24 @@ for(bug in ESKAPEE) {
                                                       cv.thresh = 0.25)
 }
 ggarrange(plotlist=ht.int.graphs)
+
+### OR do stepwise regularisation
+htr.fit = htr.int.graphs = htr.reg.graphs = list()
+for(bug in ESKAPEE) {
+  l2rep = full_to_squared(fit[[bug]])
+  trial = l2rep[1,]
+  this.m = as.matrix(final_df[final_df$eskapee == bug,3:ncol(final_df)])
+  htr.fit[[bug]] = HyperTraPS(this.m, initialparams=trial, 
+                              length=1, kernel=1, regularise=1)
+  htr.fit[[bug]]$featurenames = drug.labels
+  htr.int.graphs[[bug]] = plotHypercube.influencegraph(htr.fit[[bug]], 
+                                                       cv.thresh = 0.5)
+}
+for(bug in ESKAPEE) {
+  htr.reg.graphs[[bug]] = plotHypercube.regularisation(htr.fit[[bug]])
+}
+ggarrange(plotlist=htr.reg.graphs)
+htr.fit[[1]]$regularisation$best
 
 # should do diagnostics
 #plot_hyperinf(ht.fit)
