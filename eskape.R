@@ -97,6 +97,9 @@ fit.plot[[length(fit.plot)+1]] = plot.drugs
 
 bootset = c(fit[[1]]$boots, fit[[2]]$boots)
 
+plot_hyperinf_comparative(bootset, expt.names = rep(ESKAPEE, each=11),
+                              feature.names = substr(drug.labels, start=1, stop=3))  +
+      theme(legend.position="none")
 png(paste0("eskapee-expt-", expt, "-compare-boot.png", collapse=""),
     width=800*sf, height=400*sf, res=72*sf)
 print(

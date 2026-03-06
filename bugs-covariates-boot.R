@@ -19,7 +19,7 @@ top.bugs = c("Mycobacterium tuberculosis",
              "Escherichia coli",
              "Pseudomonas aeruginosa")
 
-bug.name = top.bugs[1]
+bug.name = top.bugs[3]
 expt = 2
 
 # choose what covariate we want to explore
@@ -144,6 +144,10 @@ boots = list()
 for(i in 1:length(res.set)) {
   boots = c(boots, res.set[[i]]$boots)
 }
+
+plot_hyperinf_comparative(res.set, threshold=0.1,
+                          expt.names = covariate.names,
+                          feature.names = drug.abbrevs) +theme(legend.position="none")
 
 # produce the comparative plot
 comp.plot = ggarrange(
