@@ -20,7 +20,8 @@ top.bugs = c("Mycobacterium tuberculosis",
              "Pseudomonas aeruginosa")
 
 bug.name = top.bugs[1]
-expt = 4
+expt = 2
+n.drugs = 7
 
 # choose what covariate we want to explore
 # for each, we place requirements on the minimum number of distinct levels
@@ -87,18 +88,7 @@ for(drug in unique(df_bin$antibiotic_name)) {
   )
 }
 appears = appears[order(-appears$min),]
-
-# start our filtering to try and get required levels with required samples
-to.get = 12
-n.covariate.levels = 0
-# loop, decreasing number of drugs each time
-while(n.covariate.levels < reqd.covariate.levels) {
-  to.get = to.get-1
-  if(to.get == 0) {
-    message("We don't have samples meeting these requirements!")
-    stop()
-  }
-  drugs = appears$drug[1:to.get]
+drugs = appears$drug[1:n.drugs]
   
   # pull the resistance profiles for these drugs into a wide dataframe 
   wide_all_unc <- tmp[tmp$antibiotic_name %in% drugs,] %>%
@@ -107,18 +97,8 @@ while(n.covariate.levels < reqd.covariate.levels) {
   
   wide_all_unc <- wide_all_unc %>%
     dplyr::select(all_of(c("BioSample_ID", "covariate")), all_of(drugs))
-  
-  wide_all <- wide_all_unc %>%
-    drop_na()
-  
-  # count the samples for each covariate level
-  t.counts = table(wide_all[,c("covariate")]) 
-  good.covariates = names(t.counts)[which(as.vector(t.counts)>reqd.samples)]
-  n.covariate.levels = length(good.covariates)
-}
-
-# subset out just those covariate levels we keep
-wide_all = wide_all[wide_all$covariate %in% good.covariates,]
+ 
+  wide_all = wide_all_unc[!is.na(wide_all_unc$covariate),]
 
 # fit the aggregated data
 fit = hyperinf(wide_all[2:ncol(wide_all)])
@@ -128,22 +108,29 @@ ggarrange(plot_hyperinf(fit),
 
 # produce a list of model fits for each covariate level
 res.set = plot.set = list()
-nboots = 50
+nboots = 10
 for(this.covariate in unique(wide_all$covariate)) {
   this.sub = wide_all[wide_all$covariate==this.covariate,2:(ncol(wide_all))]
   this.sub$covariate = paste("l-", this.sub$covariate)
   res.set[[this.covariate]] = hyperinf(this.sub, boot.parallel = nboots)
   #plot.set[[this.covariate]] = plot_hyperinf(res.set[[this.covariate]])
 }
+# BUG: doesn't run for (I think) 8 features
 
 # get labels for drugs and covariates
 drug.names = colnames(wide_all)[3:(ncol(wide_all))]
 drug.abbrevs = substr(drug.names, start=1,stop=3)
 covariate.names = unique(wide_all$covariate)
 
+boots = list()
+for(i in 1:length(res.set)) {
+  boots = c(boots, res.set[[i]]$boots)
+}
+
 plot_hyperinf_comparative(res.set, threshold=0.1,
                           expt.names = covariate.names,
-                          feature.names = drug.abbrevs) +theme(legend.position="none")
+                          style = "full",
+                          feature.names = drug.abbrevs) #+theme(legend.position="none")
 
 # produce the comparative plot
 comp.plot = ggarrange(
@@ -151,8 +138,9 @@ comp.plot = ggarrange(
                             expt.names = covariate.names,
                             feature.names = drug.abbrevs) +theme(legend.position="none")
   ,
-  plot_hyperinf_bubbles(res.set, thetastep=3, p.scale=0.5, 
-                        expt.names=rep(covariate.names, each=nboots+1),
+  plot_hyperinf_bootstrap(res.set[[1]], res.set[[2]], 
+                          thetastep=3, p.scale=0.5, 
+                        expt.names=covariate.names,
                         sqrt.trans = TRUE,
                         fill.name="Covariate",
                         feature.names = drug.abbrevs),
@@ -161,7 +149,7 @@ comp.plot = ggarrange(
 
 # output to file
 sf = 2
-png(paste0(bug.name, "-", covariate.col, "-big-boots.png", collapse=""), width=1400*sf, height=500*sf, res=72*sf)
+png(paste0(bug.name, "-", covariate.col, "-unc-big-boots.png", collapse=""), width=1400*sf, height=500*sf, res=72*sf)
 print(comp.plot)
 dev.off()
 
@@ -169,4 +157,8 @@ covariate.names
 # at the moment, this function only works for comparing exactly two model fits
 # it should show cases where bootstrap estimates for a given P_ij show complete separation
 # across the two model fits
-plot_hyperinf_bootstrap(res.set[[1]], res.set[[2]])
+plot_hyperinf_comparative(list(res.set[[1]], res.set[[2]]))
+plot_hyperinf_bubbles(res.set, p.scale = 0.1)
+plot_hyperinf_bubbles(list(res.set[[1]], res.set[[2]]), p.scale=0.1, thetastep=3)
+plot_hyperinf_bootstrap(res.set[[1]], res.set[[2]], p.scale=0.4)
+# adapt plot_hyperinf_bubbles so that it automatically recognises model fits with bootstraps
