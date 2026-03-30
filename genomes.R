@@ -6,9 +6,9 @@ library(ggrepel)
 library(ggpubr)
 library(phytools)
 
-run.bash = FALSE
-run.mash = FALSE
-get.premade.tree = TRUE
+run.bash = TRUE
+run.mash = TRUE
+get.premade.tree = FALSE
 
 # pip install ncbi-genome-download
 # brew install mash
@@ -16,7 +16,7 @@ get.premade.tree = TRUE
 #gdf = read_parquet("genotype.parquet")
 pdf = read_parquet("phenotype.parquet")
 
-ESKAPEE = c("Mycobacterium tuberculosis")
+ESKAPEE = c("Klebsiella pneumoniae")
 ids = unique(pdf$assembly_ID[pdf$species %in% ESKAPEE])
 
 if(get.premade.tree == FALSE) {
@@ -27,7 +27,7 @@ if(get.premade.tree == FALSE) {
   
   if(run.mash == TRUE) {
     # Mash distances -- change directory if needed
-    system("mash triangle sketches/*.msh > mash_distances.tab")
+    system("mash triangle sketches-hpylori/*.msh > mash_distances.tab")
   }
   lines <- readLines("mash_distances.tab")
   
@@ -63,7 +63,7 @@ if(get.premade.tree == FALSE) {
   
   # Build NJ tree
   tree <- nj(dist_obj)
-  
+
   # Save tree
   write.tree(tree, paste0(ESKAPEE, "-tree.nwk", collapse=""))
 } else {
