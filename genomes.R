@@ -14,14 +14,15 @@ run.bash = FALSE
 #gdf = read_parquet("genotype.parquet")
 pdf = read_parquet("phenotype.parquet")
 
-ESKAPEE = c("Helicobacter pylori")
+ESKAPEE = c("Mycobacterium tuberculosis")
 ids = unique(pdf$assembly_ID[pdf$species %in% ESKAPEE])
 write.table(ids, file="gca_ids.txt", row.names = FALSE, quote = FALSE, col.names = FALSE)
 if(run.bash == TRUE) {
 system("bash -lc './mash-batch.sh'")
 }
 
-# Read all lines
+# Mash distances -- change directory if needed
+system("mash triangle sketches/*.msh > mash_distances.tab")
 lines <- readLines("mash_distances.tab")
 
 # Number of genomes

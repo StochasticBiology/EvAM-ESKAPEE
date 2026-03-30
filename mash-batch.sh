@@ -60,4 +60,4 @@ done
 echo "All batches finished"
 
 # assumes all .msh files are in 'sketches/' folder
-mash triangle sketches/*.msh > mash_distances.tab
+
