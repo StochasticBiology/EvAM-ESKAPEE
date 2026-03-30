@@ -4,6 +4,7 @@ library(tidyr)
 library(hyperinf)
 library(ggrepel)
 library(ggpubr)
+library(phytools)
 
 # see details
 # https://huggingface.co/datasets/ayates/amr_portal/blob/main/README.md?utm_source=chatgpt.com
@@ -11,7 +12,7 @@ library(ggpubr)
 
 system("wget https://ftp.ebi.ac.uk/pub/databases/amr_portal/releases/2025-11/phenotype.parquet")
 df = read_parquet("phenotype.parquet")
-expt = 1
+expt = 4
 
 if(expt == 0) {
   ESKAPEE = c("Escherichia coli", "Klebsiella pneumoniae", "Staphylococcus aureus", 
@@ -38,6 +39,11 @@ if(expt == 3) {
   to.get = 7
 }
 
+if(expt == 4) {
+  ESKAPEE = c("Mycobacterium tuberculosis")
+  to.get = 4
+}
+
 df$eskapee = df$species
 df$eskapee[grep("[Ee]nterobacter", df$species)] = "Enterobacter"
 
@@ -46,7 +52,7 @@ df_bin <- df %>%
   filter(resistance_phenotype %in% c("resistant", "susceptible"),
          eskapee %in% ESKAPEE) %>%
   mutate(value = ifelse(resistance_phenotype == "resistant", 1, 0)) %>%
-  group_by(BioSample_ID, eskapee, antibiotic_name) %>%
+  group_by(assembly_ID, eskapee, antibiotic_name) %>%
   summarise(value = max(value), .groups = "drop")
 
 # summarise counts of drug-bug pairs
@@ -82,17 +88,27 @@ unique(wide_all$eskapee)
 table(wide_all$eskapee)
 
 # fit bug-specific models
-final_df = wide_all
+final_df = as.data.frame(wide_all)
 fit = fit.phy = fit.rev = fit.phy.rev = list()
 
+set.seed(1)
+this.df = final_df[final_df$eskapee == ESKAPEE[1],c(1,3:ncol(final_df))]
+this.df = this.df[sample(1:nrow(this.df), 50),]
+
+tree = read.tree("Mycobacterium tuberculosis-tree.nwk")
+tree$edge.length = abs(tree$edge.length)
+plot_hyperinf_data(this.df, tree)
+
 for(bug in ESKAPEE) {
-  set.seed(1)
-  this.df = final_df[final_df$eskapee == bug,c(1,3:ncol(final_df))]
-  this.df = this.df[sample(1:nrow(this.df), 50),]
+  #set.seed(1)
+  #this.df = final_df[final_df$eskapee == bug,c(1,3:ncol(final_df))]
+  #this.df = this.df[sample(1:nrow(this.df), 50),]
   fit[[bug]] = hyperinf(this.df, boot.parallel = 10)
-  fit.phy[[bug]] = hyperinf(this.df, auto.cluster = TRUE, boot.parallel = 10)
   fit.rev[[bug]] = hyperinf(this.df, reversible=TRUE)
-  fit.phy.rev[[bug]] = hyperinf(this.df, auto.cluster = TRUE, reversible=TRUE)
+  fit.phy[[bug]] = hyperinf(this.df, tree, boot.parallel = 10)
+  fit.phy.rev[[bug]] = hyperinf(this.df, tree, reversible=TRUE)
+  #fit.phy[[bug]] = hyperinf(this.df, auto.cluster = TRUE, boot.parallel = 10)
+  #fit.phy.rev[[bug]] = hyperinf(this.df, auto.cluster = TRUE, reversible=TRUE)
 }
 
 drug.labels = colnames(final_df[3:ncol(final_df)])
@@ -101,34 +117,35 @@ plot.drugs = ggtexttable(data.frame(Drug=drug.labels))
 
 ################
 
-for(this.bug in 1:2) {
-bug = ESKAPEE[this.bug]
-set.seed(1)
-this.df = final_df[final_df$eskapee == bug,c(1,3:ncol(final_df))]
-this.df = this.df[sample(1:nrow(this.df), 50),]
-fit.list = list(fit[[bug]]$boots[[1]], fit.phy[[bug]]$boot[[1]],
-                fit.rev[[bug]], fit.phy.rev[[bug]])
-plot.0 = ggarrange(
-plot_hyperinf_data(this.df),
-plot_hyperinf_data(this.df, auto.cluster = TRUE, font.size = 2, bmargin = 50),
-ncol=2)
-
-plot.1 = plot_hyperinf_bubbles(fit.list, 
-                      expt.names = c("CS", "Phy", "CS rev", "Phy rev"),
-                          feature.names = substr(drug.labels, start=1, stop=3)) 
-
-plot.2 = plot_hyperinf_ordering_matrices(fit.list, 
-                                expt.names = c("CS", "Phy", "CS rev", "Phy rev"),
-                                
-                                feature.names = substr(drug.labels, start=1, stop=3)) +
-  theme(axis.text.x = element_text(angle=45, hjust=1))
-        
-plot.3 = plot_hyperinf_comparative(fit.list, expt.names = c("CS", "Phy", "CS rev", "Phy rev"),
-                          feature.names = substr(drug.labels, start=1, stop=3),
-                          style="full") 
-
-sf = 2
-png(paste0("principle-", bug, "-", to.get, ".png", collapse=""), width=800*sf, height=800*sf, res=72*sf)
-print(ggarrange(plot.0, plot.1, plot.2, plot.3, nrow=2, ncol=2))
-dev.off()
+for(this.bug in length(ESKAPEE)) {
+  bug = ESKAPEE[this.bug]
+  set.seed(1)
+  this.df = final_df[final_df$eskapee == bug,c(1,3:ncol(final_df))]
+  this.df = this.df[sample(1:nrow(this.df), 50),]
+  fit.list = list(fit[[bug]]$boots[[1]], fit.phy[[bug]]$boot[[1]],
+                  fit.rev[[bug]], fit.phy.rev[[bug]])
+  plot.0 = ggarrange(
+    plot_hyperinf_data(this.df),
+    plot_hyperinf_data(this.df, tree, font.size = 2, bmargin = 50),
+    ncol=2)
+  
+  plot.1 = plot_hyperinf_bubbles(fit.list, 
+                                 expt.names = c("CS", "Phy", "CS rev", "Phy rev"),
+                                 feature.names = substr(drug.labels, start=1, stop=3)) 
+  
+  plot.2 = plot_hyperinf_ordering_matrices(fit.list, 
+                                           expt.names = c("CS", "Phy", "CS rev", "Phy rev"),
+                                           
+                                           feature.names = substr(drug.labels, start=1, stop=3)) +
+    theme(axis.text.x = element_text(angle=45, hjust=1))
+  
+  plot.3 = plot_hyperinf_comparative(fit.list, expt.names = c("CS", "Phy", "CS rev", "Phy rev"),
+                                     feature.names = substr(drug.labels, start=1, stop=3),
+                                     style="full") 
+  
+  sf = 2
+  png(paste0("principle-", bug, "-", to.get, ".png", collapse=""), width=800*sf, height=800*sf, res=72*sf)
+  print(ggarrange(plot.0, plot.1, plot.2, plot.3, nrow=2, ncol=2))
+  dev.off()
 }
+
