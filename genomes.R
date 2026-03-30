@@ -59,7 +59,7 @@ dist_obj <- as.dist(dist_mat)
 tree <- nj(dist_obj)
 
 # Save tree
-write.tree(tree, "tree.nwk")
+write.tree(tree, paste0(ESKAPEE, "-tree.nwk", collapse=""))
 
 plot(tree)
 
@@ -95,7 +95,7 @@ for(drug in unique(df_bin$antibiotic_name)) {
 appears = appears[appears$species == length(ESKAPEE),]
 appears = appears[order(-appears$min),]
 
-to.get = 4
+to.get = 8
 # "appears" now summarises appearances across pathogens
 drugs = appears$drug[1:to.get]
 
@@ -116,13 +116,18 @@ final_df = wide_all
 bug = ESKAPEE[1]
 this.df = final_df[final_df$eskapee == bug,c(1,3:ncol(final_df))]
 this.df$assembly_ID = as.character(this.df$assembly_ID)
+
 plot_hyperinf_data(this.df, tree, bmargin = 80)
 
   fit = hyperinf(this.df, boot.parallel = 10)
   fit.est.phy = hyperinf(this.df, auto.cluster = TRUE, boot.parallel = 10)
   fit.phy = hyperinf(this.df, tree, boot.parallel = 10)
   
- expt.names = c("CS", "Est phy", "Genome phy")
-plot_hyperinf_comparative(list(fit, fit.est.phy, fit.phy))
-plot_hyperinf_ordering_matrices(list(fit, fit.est.phy, fit.phy), expt.names=expt.names )
+expt.names = c("CS", "Est phy", "Genome phy")
+plot_hyperinf_comparative(list(fit, fit.est.phy, fit.phy), expt.names=expt.names)
+fits = list(fit, fit.est.phy, fit.phy)
+plot_hyperinf_bubbles(fits, expt.names=expt.names)
+
+plot_hyperinf_ordering_matrices(list(fit, fit.est.phy, fit.phy), expt.names=expt.names ) +
+  theme(axis.text.x = element_text(angle=45, hjust=1))
 
