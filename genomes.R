@@ -27,7 +27,7 @@ if(get.premade.tree == FALSE) {
   
   if(run.mash == TRUE) {
     # Mash distances -- change directory if needed
-    system("mash triangle sketches-hpylori/*.msh > mash_distances.tab")
+    system("mash triangle sketches/*.msh > mash_distances.tab")
   }
   lines <- readLines("mash_distances.tab")
   
