@@ -6,11 +6,10 @@ library(ggrepel)
 library(ggpubr)
 library(hypermk2)
 
-expt = 4
-run.mash = FALSE
-run.inference = FALSE
-run.hmk2 = TRUE
-fname = paste0("eskapee-phylo-fits-", expt, ".Rdata", collapse="")
+expt = 1
+run.mash = TRUE
+run.hmk2 = FALSE
+fname = paste0("eskapee-phylo-fits-", expt, "-", run.hmk2, ".Rdata", collapse="")
 
 # see details
 # https://huggingface.co/datasets/ayates/amr_portal/blob/main/README.md?utm_source=chatgpt.com
@@ -29,7 +28,7 @@ if(expt == 0) {
 # simpler set  
 if(expt == 1) {
   ESKAPEE = c("Escherichia coli", "Klebsiella pneumoniae")
-  to.get = 10
+  to.get = 12
 }
 
 # simpler set, smaller  
@@ -142,7 +141,7 @@ build_tree = function(filename) {
 trees = list()
 for(bug in ESKAPEE) {
   ids = unique(wide_all$assembly_ID[wide_all$eskapee == bug])
-  idfile = paste0(bug, "-gca_ids.txt", collapse="")
+  idfile = paste0(bug, "-", expt, "-gca_ids.txt", collapse="")
   idfile = gsub(" ", "", idfile)
   sketchdir = paste0("sketches_", idfile, "/", collapse="")
   if(run.mash == TRUE) {
@@ -165,68 +164,19 @@ for(bug in ESKAPEE) {
   tree = ape::multi2di(trees[[bug]])
   df = df[match(tree$tip.label, df$assembly_ID), ]
   m = as.matrix(df[,2:ncol(df)])
-  if(run.inference == TRUE) {
-    fit[[bug]] = hyperinf(m, tree, method="hypermk2", reversible=TRUE)
-    fit.hmm[[bug]] = hyperinf(df, boot.parallel = 10)
-    fit.hmm.phy[[bug]] = hyperinf(df, tree, boot.parallel = 10)
+  if(run.hmk2 == TRUE) {
+    fit.hmk2[[bug]] = hyperinf(m, tree, method="hypermk2", reversible=TRUE)
   }
+  fit.hmm[[bug]] = hyperinf(df, boot.parallel = 10)
+  fit.hmm.phy[[bug]] = hyperinf(df, tree, boot.parallel = 10)
   data.set[[bug]] = df
   tree.set[[bug]] = tree
 }
 
-if(run.inference == TRUE) {
-  all.fits = list(fit=fit, fit.hmm=fit.hmm, fit.hmm.phy=fit.hmm.phy)
-  save(all.fits, file=fname)
+if(run.hmk2 == TRUE) {
+  all.fits = list(fit.hmk2=fit.hmk2, fit.hmm=fit.hmm, fit.hmm.phy=fit.hmm.phy, data.set=data.set, tree.set=tree.set)
+} else {
+  all.fits = list(fit.hmm=fit.hmm, fit.hmm.phy=fit.hmm.phy, data.set=data.set, tree.set=tree.set)
 }
 
-load(fname)
-
-drug.labels = all.fits$fit[[1]]$feature.names
-drug.labels
-plot.drugs = ggtexttable(data.frame(Drug=drug.labels))
-fit.mk2 = all.fits$fit
-fit.hmm = all.fits$fit.hmm
-fit.hmm.phy = all.fits$fit.hmm.phy
-
-################
-if(run.diagnostics == TRUE) {
-  plot_hyperinf_ordering_matrices(list(fit.mk2[[1]], fit.hmm[[1]], fit.hmm.phy[[1]]), expt.names = c("Mk2", "HMM", "HMM+Phy"))                                                                            
-  
-  plot_hyperinf_comparative(list(fit.mk2[[1]], fit.hmm[[1]], fit.hmm.phy[[1]]), expt.names = c("Mk2", "HMM", "HMM+Phy"),
-                            feature.names = substr(drug.labels, start=1, stop=3)) 
-  
-  
-  trellis.plot = ggarrange(plot_hyperinf_data(data.set[[1]], tree.set[[1]], bmargin=100, feature.names=gsub("-", "-\n", fit.mk2[[1]]$feature.names)),
-                           plot_hyperinf_ordering_matrices(list(fit.mk2[[1]], fit.hmm[[1]], fit.hmm.phy[[1]]), expt.names = c("Mk2", "HMM", "HMM+Phy")) + theme(axis.text.x = element_text(angle=45, hjust=1)),
-                           plot_hyperinf_data(data.set[[2]], tree.set[[2]], bmargin=100, feature.names=gsub("-", "-\n", fit.mk2[[1]]$feature.names)),
-                           plot_hyperinf_ordering_matrices(list(fit.mk2[[2]], fit.hmm[[2]], fit.hmm.phy[[2]]), expt.names = c("Mk2", "HMM", "HMM+Phy")) + theme(axis.text.x = element_text(angle=45, hjust=1)), labels=c("Ec", "", "Kp", "")
-  )
-  
-  fig.name = paste0("eskapee-phylo-diagnostics-", expt, "-trellis.png", collapse="")
-  sf = 2
-  png(fig.name, width=800*sf, height=800*sf, res=72*sf)
-  print(trellis.plot)
-  dev.off()
-}
-
-plot.om = plot_hyperinf_ordering_matrices(fit.mk2, expt.names = ESKAPEE)  
-plot.net = plot_hyperinf_comparative(fit.mk2, expt.names = ESKAPEE, 
-                          style= "full", threshold = 0.15,
-                          feature.names = substr(drug.labels, start=1, stop=3))
-
-data.plots = list()
-for(bug in ESKAPEE) {
-  data.plots[[bug]] = plot_hyperinf_data(data.set[[bug]], tree.set[[bug]],
-                                         bmargin = 100,
-                                         feature.names = substr(drug.labels, start=1, stop=3))
-}
-
-compare.plot = ggarrange( ggarrange(plotlist=data.plots, labels=ESKAPEE),
-           ggarrange(plot.om, plot.net), nrow=2)
-
-fig.name = paste0("eskapee-phylo-comparison-", expt, ".png", collapse="")
-sf = 2
-png(fig.name, width=800*sf, height=800*sf, res=72*sf)
-print(compare.plot)
-dev.off()
-
+save(all.fits, file=fname)
