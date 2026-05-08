@@ -6,7 +6,7 @@ library(ggrepel)
 library(ggpubr)
 library(hypermk2)
 
-expt = 1
+expt = 5
 run.hmk2 = FALSE
 run.diagnostics = FALSE
 fname = paste0("eskapee-phylo-fits-", expt, "-", run.hmk2, ".Rdata", collapse="")
@@ -54,23 +54,36 @@ fit.hmm.phy = all.fits$fit.hmm.phy
 
 ################
 
-plot.om = plot_hyperinf_ordering_matrices(fit.hmm.phy, expt.names = ESKAPEE)  
-plot.net = plot_hyperinf_comparative(fit.hmm.phy, expt.names = ESKAPEE, 
+to.plot = 1:length(fit.hmm.phy)
+#to.plot = 1:2
+fname.index = to.plot[length(to.plot)]
+
+plot.om = plot_hyperinf_ordering_matrices(fit.hmm.phy[to.plot], 
+                                          expt.names = ESKAPEE[to.plot])  
+plot.net = plot_hyperinf_comparative(fit.hmm.phy[to.plot], 
+                                     expt.names = ESKAPEE[to.plot], 
                                      style= "full", threshold = 0.15,
                                      feature.names = substr(drug.labels, start=1, stop=3))
 
 data.plots = list()
-for(bug in ESKAPEE) {
+for(bug in ESKAPEE[to.plot]) {
   data.plots[[bug]] = plot_hyperinf_data(data.set[[bug]], tree.set[[bug]],
                                          bmargin = 100,
                                          feature.names = substr(drug.labels, start=1, stop=3))
 }
 
-compare.plot = ggarrange( ggarrange(plotlist=data.plots, labels=ESKAPEE, nrow=1),
+compare.plot = ggarrange( ggarrange(plotlist=data.plots, 
+                                    labels=ESKAPEE[to.plot], nrow=1),
                           ggarrange(plot.om, plot.net), nrow=2)
 
-fig.name = paste0("eskapee-phylo-comparison-hmm-", expt, "-", run.hmk2, ".png", collapse="")
+fig.name = paste0("eskapee-phylo-comparison-hmm-", expt, "-", run.hmk2, "-", fname.index, ".png", collapse="")
 sf = 2
 png(fig.name, width=1000*sf, height=800*sf, res=72*sf)
 print(compare.plot)
+dev.off()
+
+fig.name = paste0("eskapee-phylo-comparison-simple-hmm-", expt, "-", run.hmk2, "-", fname.index, ".png", collapse="")
+sf = 2
+png(fig.name, width=800*sf, height=400*sf, res=72*sf)
+print( ggarrange(plot.om, plot.net), nrow=1)
 dev.off()
