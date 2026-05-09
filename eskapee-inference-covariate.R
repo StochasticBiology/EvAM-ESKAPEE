@@ -9,7 +9,7 @@ library(hypermk2)
 #system("wget https://ftp.ebi.ac.uk/pub/databases/amr_portal/releases/2025-11/phenotype.parquet")
 df = read_parquet("phenotype.parquet")
 
-expt = 5
+expt = 6
 covariate = "geographical_region"
 cov.index = which(colnames(df) == covariate)
 df = df[!is.na(df[,cov.index]),]
@@ -51,6 +51,11 @@ if(expt == 5) {
   to.get = 8
 }
 
+if(expt == 6) {
+  ESKAPEE = c("Acinetobacter baumannii", "Pseudomonas aeruginosa")
+  to.get = 8
+}
+
 if(expt == 2) {
   ESKAPEE = c("Escherichia coli", "Klebsiella pneumoniae", "Acinetobacter baumannii")
   to.get = 9
@@ -71,8 +76,9 @@ df_bin <- df %>%
   filter(resistance_phenotype %in% c("resistant", "susceptible"),
          eskapee %in% ESKAPEE) %>%
   mutate(value = ifelse(resistance_phenotype == "resistant", 1, 0)) %>%
-  group_by(BioSample_ID, assembly_ID, eskapee, antibiotic_name) %>%
+  group_by(BioSample_ID, assembly_ID, eskapee, antibiotic_name, !!sym(covariate)) %>%
   summarise(value = max(value), .groups = "drop")
+
 
 # summarise counts of drug-bug pairs
 tmp = df_bin
@@ -168,17 +174,25 @@ final_df = wide_all
 
 fit = fit.hmk2 = fit.hmm = fit.hmm.phy = tree.set = data.set = list()
 for(bug in ESKAPEE) {
-  df = final_df[final_df$eskapee == bug,c(2,4:ncol(final_df))]
-  tree = ape::multi2di(trees[[bug]])
-  df = df[match(tree$tip.label, df$assembly_ID), ]
-  m = as.matrix(df[,2:ncol(df)])
-  if(run.hmk2 == TRUE) {
-    fit.hmk2[[bug]] = hyperinf(m, tree, method="hypermk2", reversible=TRUE)
+  for(this.cov in unique(final_df[[covariate]])) {
+    message(bug, " ", this.cov)
+    df = final_df[final_df$eskapee == bug & final_df[[covariate]] == this.cov,
+                  c(2,5:ncol(final_df))]
+    this.label = paste0(bug, "-", this.cov, collapse="")
+    if(nrow(df) > 5) {
+      tree = ape::multi2di(trees[[bug]])
+      tree <- ape::drop.tip(tree, setdiff(tree$tip.label, df$assembly_ID))
+      df = df[match(tree$tip.label, df$assembly_ID), ]
+      m = as.matrix(df[,2:ncol(df)])
+      if(run.hmk2 == TRUE) {
+        fit.hmk2[[this.label]] = hyperinf(m, tree, method="hypermk2", reversible=TRUE)
+      }
+      fit.hmm[[this.label]] = hyperinf(df, boot.parallel = 10)
+      fit.hmm.phy[[this.label]] = hyperinf(df, tree, boot.parallel = 10)
+      data.set[[this.label]] = df
+      tree.set[[this.label]] = tree
+    }
   }
-  fit.hmm[[bug]] = hyperinf(df, boot.parallel = 10)
-  fit.hmm.phy[[bug]] = hyperinf(df, tree, boot.parallel = 10)
-  data.set[[bug]] = df
-  tree.set[[bug]] = tree
 }
 
 if(run.hmk2 == TRUE) {
