@@ -6,9 +6,9 @@ library(ggrepel)
 library(ggpubr)
 library(hypermk2)
 
-expt = 1
+expt = 0
 run.mash = TRUE
-run.hmk2 = FALSE
+run.hmk2 = TRUE
 fname = paste0("eskapee-phylo-fits-", expt, "-", run.hmk2, ".Rdata", collapse="")
 
 # see details
@@ -23,6 +23,9 @@ if(expt == 0) {
               "Acinetobacter baumannii", "Pseudomonas aeruginosa", "Enterococcus faecium",
               "Enterobacter")
   to.get = 4
+  ESKAPEE = c("Escherichia coli", "Klebsiella pneumoniae", "Staphylococcus aureus", 
+              "Acinetobacter baumannii", "Enterococcus faecium",
+              "Enterobacter")
 }
 
 # simpler set  
@@ -158,7 +161,7 @@ for(bug in ESKAPEE) {
 # fit bug-specific models
 final_df = wide_all
 
-fit = fit.hmm = fit.hmm.phy = tree.set = data.set = list()
+fit = fit.hmk2 = fit.hmm = fit.hmm.phy = tree.set = data.set = list()
 for(bug in ESKAPEE) {
   df = final_df[final_df$eskapee == bug,c(2,4:ncol(final_df))]
   tree = ape::multi2di(trees[[bug]])

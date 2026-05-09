@@ -6,9 +6,9 @@ library(ggrepel)
 library(ggpubr)
 library(hypermk2)
 
-expt = 5
-run.hmk2 = FALSE
-run.diagnostics = FALSE
+expt = 0
+run.hmk2 = TRUE
+run.diagnostics = TRUE
 fname = paste0("eskapee-phylo-fits-", expt, "-", run.hmk2, ".Rdata", collapse="")
 
 load(fname)
@@ -27,7 +27,9 @@ if(run.hmk2 == TRUE) {
 
 ################
 if(run.diagnostics == TRUE) {
-  plot_hyperinf_ordering_matrices(list(fit.mk2[[1]], fit.hmm[[1]], fit.hmm.phy[[1]]), expt.names = c("Mk2", "HMM", "HMM+Phy"))                                                                            
+  plot_hyperinf_ordering_matrices(c(fit.mk2, fit.hmm.phy), 
+                                  expt.names = c(paste(names(fit.mk2), "Mk2"),
+                                    paste(names(fit.hmm.phy), "HMM")))                                                                            
   
   plot_hyperinf_comparative(list(fit.mk2[[1]], fit.hmm[[1]], fit.hmm.phy[[1]]), expt.names = c("Mk2", "HMM", "HMM+Phy"),
                             feature.names = substr(drug.labels, start=1, stop=3)) 
@@ -53,6 +55,8 @@ fit.hmm = all.fits$fit.hmm
 fit.hmm.phy = all.fits$fit.hmm.phy
 
 ################
+
+### TO DO: Mk2 / HMM comparison
 
 to.plot = 1:length(fit.hmm.phy)
 #to.plot = 1:2
