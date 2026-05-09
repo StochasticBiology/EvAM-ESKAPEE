@@ -27,13 +27,21 @@ if(run.hmk2 == TRUE) {
 
 ################
 if(run.diagnostics == TRUE) {
-  plot_hyperinf_ordering_matrices(c(fit.mk2, fit.hmm.phy), 
+  plot.d.om = plot_hyperinf_ordering_matrices(c(fit.mk2, fit.hmm.phy), 
                                   expt.names = c(paste(names(fit.mk2), "Mk2"),
                                     paste(names(fit.hmm.phy), "HMM")))                                                                            
   
-  plot_hyperinf_comparative(list(fit.mk2[[1]], fit.hmm[[1]], fit.hmm.phy[[1]]), expt.names = c("Mk2", "HMM", "HMM+Phy"),
+  plot.d.com.full = plot_hyperinf_comparative(c(fit.mk2, fit.hmm.phy), 
+                            expt.names = c(paste(names(fit.mk2), "Mk2"),
+                                           paste(names(fit.hmm.phy), "HMM")),
+                            style = "full",
                             feature.names = substr(drug.labels, start=1, stop=3)) 
   
+  plot.d.com.lim = plot_hyperinf_comparative(c(fit.mk2, fit.hmm.phy), 
+                                              expt.names = c(paste(names(fit.mk2), "Mk2"),
+                                                             paste(names(fit.hmm.phy), "HMM")),
+                                              style = "limited",
+                                              feature.names = substr(drug.labels, start=1, stop=3)) 
   
   trellis.plot = ggarrange(plot_hyperinf_data(data.set[[1]], tree.set[[1]], bmargin=100, feature.names=gsub("-", "-\n", fit.mk2[[1]]$feature.names)),
                            plot_hyperinf_ordering_matrices(list(fit.mk2[[1]], fit.hmm[[1]], fit.hmm.phy[[1]]), expt.names = c("Mk2", "HMM", "HMM+Phy")) + theme(axis.text.x = element_text(angle=45, hjust=1)),
