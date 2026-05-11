@@ -6,10 +6,11 @@ library(ggrepel)
 library(ggpubr)
 library(hypermk2)
 
-expt = 4
+# covariates so far: 5/TRUE/33 [geo region]; 4/TRUE/35 [age decade]; 7/TRUE/33 [TB, geo region]
+expt = 7
 run.hmk2 = TRUE
 run.diagnostics = TRUE
-cov.index = 35
+cov.index = 33
 
 if(cov.index != FALSE) {
   fname = paste0("eskapee-phylo-fits-", expt, "-cov-", cov.index, "-", run.hmk2, ".Rdata", collapse="")
@@ -51,8 +52,8 @@ if(run.diagnostics == TRUE) {
   
   
   fig.name = paste0("eskapee-phylo-diagnostics-", expt, "-trellis.png", collapse="")
-  sf = 2
-  png(fig.name, width=1000*sf, height=500*sf, res=72*sf)
+  sf = 3
+  png(fig.name, width=1200*sf, height=500*sf, res=72*sf)
   print(ggarrange(plot.d.om, plot.d.com.lim))
   dev.off()
 }
@@ -65,38 +66,42 @@ fit.hmm.phy = all.fits$fit.hmm.phy
 
 ################
 
-### TO DO: Mk2 / HMM comparison
-
 to.plot = 1:length(fit.hmm.phy)
 #to.plot = 1:2
 fname.index = to.plot[length(to.plot)]
 
+if(cov.index != FALSE) {
+  fig.name.1 = paste0("eskapee-phylo-comparison-hmm-", expt, "-cov-", cov.index, "-", run.hmk2, "-", fname.index, ".png", collapse="")
+  fig.name.2 = paste0("eskapee-phylo-comparison-simple-hmm-", expt, "-cov-", cov.index, "-", run.hmk2, "-", fname.index, ".png", collapse="")
+} else {
+  fig.name.1 = paste0("eskapee-phylo-comparison-hmm-", expt, "-", run.hmk2, "-", fname.index, ".png", collapse="")
+  fig.name.2 = paste0("eskapee-phylo-comparison-simple-hmm-", expt, "-", run.hmk2, "-", fname.index, ".png", collapse="")
+}
+
 plot.om = plot_hyperinf_ordering_matrices(fit.hmm.phy[to.plot], 
-                                          expt.names = ESKAPEE[to.plot])  
+                                          expt.names = names(fit.hmm.phy)[to.plot])  
 plot.net = plot_hyperinf_comparative(fit.hmm.phy[to.plot], 
-                                     expt.names = ESKAPEE[to.plot], 
+                                     expt.names = names(fit.hmm.phy)[to.plot], 
                                      style= "full", threshold = 0.15,
                                      feature.names = substr(drug.labels, start=1, stop=3))
 
 data.plots = list()
-for(bug in ESKAPEE[to.plot]) {
+for(bug in names(data.set)[to.plot]) {
   data.plots[[bug]] = plot_hyperinf_data(data.set[[bug]], tree.set[[bug]],
                                          bmargin = 100,
                                          feature.names = substr(drug.labels, start=1, stop=3))
 }
 
 compare.plot = ggarrange( ggarrange(plotlist=data.plots, 
-                                    labels=ESKAPEE[to.plot], nrow=1),
+                                    labels=names(data.set)[to.plot], nrow=1),
                           ggarrange(plot.om, plot.net), nrow=2)
 
-fig.name = paste0("eskapee-phylo-comparison-hmm-", expt, "-", run.hmk2, "-", fname.index, ".png", collapse="")
 sf = 2
-png(fig.name, width=1000*sf, height=800*sf, res=72*sf)
+png(fig.name.1, width=1000*sf, height=800*sf, res=72*sf)
 print(compare.plot)
 dev.off()
 
-fig.name = paste0("eskapee-phylo-comparison-simple-hmm-", expt, "-", run.hmk2, "-", fname.index, ".png", collapse="")
 sf = 2
-png(fig.name, width=800*sf, height=400*sf, res=72*sf)
+png(fig.name.2, width=800*sf, height=400*sf, res=72*sf)
 print( ggarrange(plot.om, plot.net), nrow=1)
 dev.off()
