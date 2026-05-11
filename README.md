@@ -11,6 +11,7 @@ Various evolutionary accumulation modelling approaches for comparing MDR evoluti
 
 For example, `eskapee-phylo-fits-4-cov-35-TRUE.Rdata` is covariate 35 (geographical region) for experiment 4 (the 5 top drugs in Ec and Kp), including a HyperMk2 run. Output files will be labelled with this same pattern.
 
+*Next to do:* hypothesis testing for covariate influence.
 
 References
 -----
