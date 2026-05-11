@@ -8,9 +8,11 @@ library(hypermk2)
 
 #system("wget https://ftp.ebi.ac.uk/pub/databases/amr_portal/releases/2025-11/phenotype.parquet")
 df = read_parquet("phenotype.parquet")
+df$host_age_decade = floor(as.numeric(df$host_age)/10)*10
 
-expt = 6
-covariate = "geographical_region"
+expt = 4
+# covariate = "geographical_region"
+covariate = "host_age_decade"
 cov.index = which(colnames(df) == covariate)
 df = df[!is.na(df[,cov.index]),]
 run.mash = TRUE
@@ -54,6 +56,11 @@ if(expt == 5) {
 if(expt == 6) {
   ESKAPEE = c("Acinetobacter baumannii", "Pseudomonas aeruginosa")
   to.get = 8
+}
+
+if(expt == 7) {
+  ESKAPEE = c("Mycobacterium tuberculosis")
+  to.get = 6
 }
 
 if(expt == 2) {
@@ -184,13 +191,15 @@ for(bug in ESKAPEE) {
       tree <- ape::drop.tip(tree, setdiff(tree$tip.label, df$assembly_ID))
       df = df[match(tree$tip.label, df$assembly_ID), ]
       m = as.matrix(df[,2:ncol(df)])
-      if(run.hmk2 == TRUE) {
+      if(nrow(unique(m)) >= 2) {
+        if(run.hmk2 == TRUE) {
         fit.hmk2[[this.label]] = hyperinf(m, tree, method="hypermk2", reversible=TRUE)
+        }
+        fit.hmm[[this.label]] = hyperinf(df, boot.parallel = 10)
+        fit.hmm.phy[[this.label]] = hyperinf(df, tree, boot.parallel = 10)
+        data.set[[this.label]] = df
+        tree.set[[this.label]] = tree
       }
-      fit.hmm[[this.label]] = hyperinf(df, boot.parallel = 10)
-      fit.hmm.phy[[this.label]] = hyperinf(df, tree, boot.parallel = 10)
-      data.set[[this.label]] = df
-      tree.set[[this.label]] = tree
     }
   }
 }
@@ -202,3 +211,9 @@ if(run.hmk2 == TRUE) {
 }
 
 save(all.fits, file=fname)
+
+subset = grep("Klebsiella", names(fit.hmm.phy))
+cp1 = plot_hyperinf_ordering_matrices(fit.hmm.phy[subset], expt.names = names(fit.hmm.phy)[subset])
+if(run.hmk2 == TRUE) {
+cp2 = plot_hyperinf_ordering_matrices(fit.hmk2, expt.names = names(fit.hmk2))
+}
