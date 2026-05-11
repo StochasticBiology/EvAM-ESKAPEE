@@ -6,10 +6,16 @@ library(ggrepel)
 library(ggpubr)
 library(hypermk2)
 
-expt = 0
+expt = 4
 run.hmk2 = TRUE
 run.diagnostics = TRUE
-fname = paste0("eskapee-phylo-fits-", expt, "-", run.hmk2, ".Rdata", collapse="")
+cov.index = 35
+
+if(cov.index != FALSE) {
+  fname = paste0("eskapee-phylo-fits-", expt, "-cov-", cov.index, "-", run.hmk2, ".Rdata", collapse="")
+} else {
+  fname = paste0("eskapee-phylo-fits-", expt, "-", run.hmk2, ".Rdata", collapse="")
+}
 
 load(fname)
 
@@ -43,16 +49,11 @@ if(run.diagnostics == TRUE) {
                                               style = "limited",
                                               feature.names = substr(drug.labels, start=1, stop=3)) 
   
-  trellis.plot = ggarrange(plot_hyperinf_data(data.set[[1]], tree.set[[1]], bmargin=100, feature.names=gsub("-", "-\n", fit.mk2[[1]]$feature.names)),
-                           plot_hyperinf_ordering_matrices(list(fit.mk2[[1]], fit.hmm[[1]], fit.hmm.phy[[1]]), expt.names = c("Mk2", "HMM", "HMM+Phy")) + theme(axis.text.x = element_text(angle=45, hjust=1)),
-                           plot_hyperinf_data(data.set[[2]], tree.set[[2]], bmargin=100, feature.names=gsub("-", "-\n", fit.mk2[[1]]$feature.names)),
-                           plot_hyperinf_ordering_matrices(list(fit.mk2[[2]], fit.hmm[[2]], fit.hmm.phy[[2]]), expt.names = c("Mk2", "HMM", "HMM+Phy")) + theme(axis.text.x = element_text(angle=45, hjust=1)), labels=c("Ec", "", "Kp", "")
-  )
   
   fig.name = paste0("eskapee-phylo-diagnostics-", expt, "-trellis.png", collapse="")
   sf = 2
-  png(fig.name, width=800*sf, height=800*sf, res=72*sf)
-  print(trellis.plot)
+  png(fig.name, width=1000*sf, height=500*sf, res=72*sf)
+  print(ggarrange(plot.d.om, plot.d.com.lim))
   dev.off()
 }
 
