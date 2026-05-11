@@ -5,7 +5,12 @@ For old dev content, see `old-versions`.
 
 Uses hyperinf https://github.com/StochasticBiology/hyperinf including HyperMk2 and HyperHMM. Also uses `ncbi-genome-download` and `mash`, and pulls data from the CABBAGE database.
 
-Various evolutionary accumulation modelling approaches for comparing MDR evolution across different pathogens (and covariates). First HyperMk2 and HyperHMM outputs are compared for a small subset question. Then HyperHMM is taken forward to explore bigger questions. Phylogenies are constructed using downloaded genomes mash'd, presence/absence features are from CABBAGE.
+Various evolutionary accumulation modelling approaches for comparing MDR evolution across different pathogens (and covariates). HyperMk2 and HyperHMM outputs are compared when questions are small-scale. HyperHMM alone taken forward to explore bigger questions. Phylogenies are constructed using batch-downloaded genomes mash'd, presence/absence features are from CABBAGE.
+
+`eskapee-inference.R` does inference of evolutionary pathways for a given set of bugs and drugs. `eskapee-inference-covariate.R` also looks at behaviour across levels of a factor covariate (geographical region; age decade). `eskapee-plotting.R` produces plots summarising the dynamics in these different cases. Across these codes, an "experiment" (bug-drug combination) is labelled by an integer, a covariate is labelled by another, and whether HyperMk2 is used or not is given as a Boolean in output. The curated data inputs and fitted model outputs are written to an Rdata file by `eskapee-inference*.R`; this Rdata file is read in by `eskapee-plotting.R` and plot output files are produced.
+
+For example, `eskapee-phylo-fits-4-cov-35-TRUE.Rdata` is covariate 35 (geographical region) for experiment 4 (the 5 top drugs in Ec and Kp), including a HyperMk2 run. Output files will be labelled with this same pattern.
+
 
 References
 -----
