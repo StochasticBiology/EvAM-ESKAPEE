@@ -212,7 +212,8 @@ if(run.hmk2 == TRUE) {
 
 save(all.fits, file=fname)
 
-subset = grep("Klebsiella", names(fit.hmm.phy))
+subset = 1:length(fit.hmm.phy)
+#subset = grep("Klebsiella", names(fit.hmm.phy))
 cp1 = plot_hyperinf_ordering_matrices(fit.hmm.phy[subset], expt.names = names(fit.hmm.phy)[subset])
 if(run.hmk2 == TRUE) {
 cp2 = plot_hyperinf_ordering_matrices(fit.hmk2, expt.names = names(fit.hmk2))
