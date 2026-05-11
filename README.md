@@ -9,7 +9,7 @@ Various evolutionary accumulation modelling approaches for comparing MDR evoluti
 
 `eskapee-inference.R` does inference of evolutionary pathways for a given set of bugs and drugs. `eskapee-inference-covariate.R` also looks at behaviour across levels of a factor covariate (geographical region; age decade). `eskapee-plotting.R` produces plots summarising the dynamics in these different cases. Across these codes, an "experiment" (bug-drug combination) is labelled by an integer, a covariate is labelled by another, and whether HyperMk2 is used or not is given as a Boolean in output. The curated data inputs and fitted model outputs are written to an Rdata file by `eskapee-inference*.R`; this Rdata file is read in by `eskapee-plotting.R` and plot output files are produced.
 
-For example, `eskapee-phylo-fits-4-cov-35-TRUE.Rdata` is covariate 35 (geographical region) for experiment 4 (the 5 top drugs in Ec and Kp), including a HyperMk2 run. Output files will be labelled with this same pattern.
+For example, `eskapee-phylo-fits-4-cov-35-TRUE.Rdata` is covariate 35 (geographical region) for experiment 4 (the 5 top drugs in Ec and Kp), including a HyperMk2 run. Output files will be labelled with this same pattern, with a final appended integer saying how many elements of the full experiment were included (in case we just want to look at a subset of bugs, for example).
 
 *Next to do:* hypothesis testing for covariate influence.
 
