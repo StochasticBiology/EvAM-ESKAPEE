@@ -6,8 +6,8 @@ library(ggrepel)
 library(ggpubr)
 library(hypermk2)
 
-expt = 0
-run.mash = TRUE
+expt = 1
+run.mash = FALSE
 run.hmk2 = TRUE
 fname = paste0("eskapee-phylo-fits-", expt, "-", run.hmk2, ".Rdata", collapse="")
 
