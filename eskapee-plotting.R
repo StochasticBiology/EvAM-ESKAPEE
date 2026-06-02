@@ -5,14 +5,20 @@ library(hyperinf)
 library(ggrepel)
 library(ggpubr)
 library(hypermk2)
+library(igraph)
+library(ggraph)
 
-# totals so far: 5/TRUE, 0/TRUE, 
+# 5: Ec, Kp, Ab, Pa x 8
+# 0: Ec, Kp, Sa, Ab, Ef, Es x 4
+# 8: Ec, Kp x 10
+# totals so far: 5/TRUE, 0/TRUE, 1/FALSE, 
 # covariates so far: 5/TRUE/33 [geo region]; 4/TRUE/35 [age decade]; 7/TRUE/33 [TB, geo region]
 expt = 0
 run.hmk2 = TRUE
-plot.hmk2 = FALSE
-run.diagnostics = TRUE
+plot.hmk2 = TRUE
+run.diagnostics = FALSE
 cov.index = FALSE
+sf = 2
 
 if(cov.index != FALSE) {
   fname = paste0("eskapee-phylo-fits-", expt, "-cov-", cov.index, "-", run.hmk2, ".Rdata", collapse="")
@@ -110,9 +116,11 @@ fname.index = to.plot[length(to.plot)]
 if(cov.index != FALSE) {
   fig.name.1 = paste0("eskapee-phylo-comparison-mk2-", expt, "-cov-", cov.index, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
   fig.name.2 = paste0("eskapee-phylo-comparison-simple-mk2-", expt, "-cov-", cov.index, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
+  fig.name.3 = paste0("eskapee-phylo-comparison-AICs-", expt, "-cov-", cov.index, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
 } else {
   fig.name.1 = paste0("eskapee-phylo-comparison-mk2-", expt, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
   fig.name.2 = paste0("eskapee-phylo-comparison-simple-mk2-", expt, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
+  fig.name.3 = paste0("eskapee-phylo-comparison-AICs-", expt, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
 }
 
 plot.om = plot_hyperinf_ordering_matrices(fit.plot[to.plot], 
@@ -149,7 +157,103 @@ print( ggarrange(plot.om, plot.net), nrow=1)
 dev.off()
 
 
-##############
+############## dAICs and interactions
+
+nexpt = length(all.fits$data.set)
+
+this.pc = this.null = this.null.AIC = this.hmk2.AIC = list()
+
+for(i in 1:nexpt) {
+  this.data = all.fits$data.set[[i]]
+  this.tree = all.fits$tree.set[[i]]
+  this.tree$edge.length = abs(this.tree$edge.length)
+  #this.tree$edge.length <- this.tree$edge.length / max(this.tree$edge.length)
+  this.mat = as.matrix(this.data[,2:ncol(this.data)])
+  this.pc[[i]] = phylo_correlations(this.mat, this.tree)
+  this.null[[i]] = hypermk2_independent(this.mat, this.tree)
+  this.null.AIC[[i]] = this.null[[i]]$AIC
+  this.hmk2.AIC[[i]] = all.fits$fit.hmk2[[i]]$fitted_mk$AIC
+  c(this.null.AIC, this.hmk2.AIC)
+} 
+
+
+get_initials <- function(x) {
+  sub("^([A-Za-z])[A-Za-z]*\\s+([A-Za-z])[A-Za-z]*.*$", "\\1\\2", x)
+}
+
+# delta AICs for null model comparison
+daic.df = data.frame(bug=get_initials(names(all.fits$fit.hmk2)[rep(1:nexpt, 2)]),
+                     AICtype = rep(c("Null", "HMk2"), each=nexpt),
+                     vals=c(unlist(this.null.AIC), unlist(this.hmk2.AIC)))
+
+plot.daic = ggplot(daic.df, aes(x=bug, y=vals, fill=AICtype)) + 
+  geom_col(position="dodge") + scale_y_log10() +
+  labs(x = "Species", y = "AIC", fill = "Model") +
+  theme_minimal()
+
+
+int.dfs = data.frame()
+for(i in 1:nexpt) {
+  test.daic = daic.df$vals[daic.df$bug == unique(daic.df$bug)[i] & daic.df$AICtype == "HMk2"] - 
+    daic.df$vals[daic.df$bug == unique(daic.df$bug)[i] & daic.df$AICtype == "Null"] 
+  this.ints = which(this.pc[[i]]$dAICs < test.daic/ncol(this.pc[[i]]$dAICs), arr.ind = TRUE)
+  if(nrow(this.ints) > 0) {
+  int.dfs = rbind(int.dfs, data.frame(expt=i, 
+                                      from=this.ints[this.ints[,1]>this.ints[,2],1],
+                                      to=this.ints[this.ints[,1]>this.ints[,2],2]))
+  }
+}
+int.dfs
+drug.names = colnames(this.pc[[i]]$dAICs)
+drug.names.3 = substr(drug.names, 1, 3)
+
+
+edges <- int.dfs %>%
+  count(from, to, name = "weight")
+edges$from = drug.names.3[edges$from]
+edges$to = drug.names.3[edges$to]
+
+# interaction graphs
+
+g = graph_from_data_frame(edges)
+plot.ints = ggraph(g) + geom_edge_link(aes(width = weight), alpha = 0.6) +
+  geom_node_label(aes(label=name)) + theme_void()
+
+png(fig.name.3, width=600*sf, height=200*sf, res=72*sf)
+ggarrange(plot.daic, plot.ints, nrow=1, labels=c("A", "B"))
+dev.off()
+
+###########
+
+
+test.daic = daic.df$vals[daic.df$bug == "Ec" & daic.df$AICtype == "HMk2"] - 
+  daic.df$vals[daic.df$bug == "Ec" & daic.df$AICtype == "Null"] 
+
+this.pc[[1]]$dAICs 
+
+this.ints.df <- as.data.frame(this.pc[[1]]$dAICs) %>%
+  mutate(drug1 = rownames(.)) %>%
+  pivot_longer(-drug1, names_to = "drug2", values_to = "dAIC") %>%
+  filter(!is.na(dAIC), dAIC < 0) %>%
+  # remove duplicate pairs (since matrix is symmetric)
+  rowwise() %>%
+  mutate(pair = paste(sort(c(drug1, drug2)), collapse = "_")) %>%
+  ungroup() %>%
+  distinct(pair, .keep_all = TRUE) %>%
+  arrange(dAIC)  # most negative first
+
+
+# ^ issues with 1e100 values
+
+this.null$by.feature[[1]]$fitted_mk$AIC
+this.null$by.feature[[2]]$fitted_mk$AIC
+this.null$by.feature[[3]]$fitted_mk$AIC
+this.null$by.feature[[4]]$fitted_mk$AIC
+this.null$by.feature[[5]]$fitted_mk$AIC
+this.null$by.feature[[6]]$fitted_mk$AIC
+
+i = 1
+plot_hyperinf_data(all.fits$data.set[[i]], all.fits$tree.set[[i]])
 
 ##############
 
