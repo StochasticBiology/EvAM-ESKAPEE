@@ -5,6 +5,9 @@ library(stringr)
 library(ComplexUpset)
 library(ggplot2)
 library(igraph)
+library(ggpubr)
+library(hyperinf)
+library(arrow)
 
 run.inference = TRUE
 sf = 2
@@ -223,8 +226,9 @@ drug.names = fits[[1]]$feature.names
 qdf = read_parquet("phenotype.parquet")
 
 qdf = qdf[qdf$species %in% c("Klebsiella pneumoniae", "Escherichia coli") &
+            #as.numeric(qdf$collection_year) <= 2015 &
             qdf$antibiotic_name %in% drug.names, 
-          c("BioSample_ID", "species", "antibiotic_name", "resistance_phenotype")]
+          c("BioSample_ID", "species", "collection_year", "antibiotic_name", "resistance_phenotype")]
 
 qsens_mat <- qdf %>%
   # filter(resistance_phenotype == "resistant") %>%
@@ -238,7 +242,7 @@ qsens_mat <- qdf %>%
 
 q.upset = upset(
   qsens_mat,
-  intersect = colnames(qsens_mat)[-1],  # all drug columns
+  intersect = colnames(qsens_mat)[5:ncol(qsens_mat)],  # all drug columns
   n_intersections = 20
 )
 q.upset
@@ -246,6 +250,7 @@ q.upset
 qdf = qdf[!(qdf$antibiotic_name %in% prune),]
 table(qdf$antibiotic_name)
 
+# get IDs with complete records for each drug
 good_ids <- qdf %>%
   count(BioSample_ID) %>%
   filter(n == n_distinct(qdf$antibiotic_name)) %>%
@@ -268,10 +273,19 @@ qsens_mat <- qdf_filtered %>%
 
 qfits = qthis.mat = list()
 for(species in unique(qsens_mat$species)) {
-  qthis.mat[[species]] = as.matrix(qsens_mat[qsens_mat$species == species,4:ncol(qsens_mat)])
+  qthis.mat[[species]] = as.matrix(qsens_mat[qsens_mat$species == species,5:ncol(qsens_mat)])
   if(run.inference == TRUE) {
     qfits[[species]] = hyperinf(qthis.mat[[species]], method="hyperhmm", boot.parallel=3)
   }
+}
+
+# only Kp has complete records pre-2010
+qthis.mat[["past"]] = as.matrix(qsens_mat[qsens_mat$species == "Klebsiella pneumoniae" &
+                                            !is.na(qsens_mat$collection_year) &
+                                            qsens_mat$collection_year < 2010,
+                                          5:ncol(qsens_mat)])
+if(run.inference == TRUE) {
+  qfits[["past"]] = hyperinf(qthis.mat[["past"]], method="hyperhmm", boot.parallel=3)
 }
 
 if(run.inference == TRUE) {
@@ -280,7 +294,7 @@ if(run.inference == TRUE) {
   load("qtanzania-fits.Rdata")
 }
 
-qplot.comp = plot_hyperinf_comparative(qfits, expt.names=c("Ec", "Kp"),
+qplot.comp = plot_hyperinf_comparative(qfits[1:2], expt.names=c("Ec", "Kp"),
                                        feature.names = substr(qfits[[1]]$feature.names, 1, 3),
                                        style = "full")
 
@@ -292,7 +306,7 @@ dev.off()
 
 ####### TASK 3 -- try and do predictions
 
-for(speciesref in 1:2) {
+for(speciesref in 1:3) {
   if(speciesref == 1) { 
     species = "Ec"
   } else {
@@ -328,9 +342,9 @@ for(speciesref in 1:2) {
   }
   for(i in 2:5) {
     for(old.state in old.states) {
-      for(new.state in inf.trans$To[ec.trans$From == old.state]) {
+      for(new.state in inf.trans$To[inf.trans$From == old.state]) {
         weights[i, new.state+1] = weights[i, new.state+1] + 
-          ec.trans$Probability[inf.trans$To == new.state & inf.trans$From == old.state]*
+          inf.trans$Probability[inf.trans$To == new.state & inf.trans$From == old.state]*
           weights[i-1, old.state+1]
       }    
     }
@@ -355,7 +369,7 @@ for(speciesref in 1:2) {
 
 embed.g = list()
 
-for(speciesref in 1:2) {
+for(speciesref in 1:3) {
   if(speciesref == 1) { 
     species = "Ec"
   } else {
@@ -379,6 +393,8 @@ for(speciesref in 1:2) {
   #pg = hyperinf::get_plot_graph(cabbage.fit, threshold = 5e-3)
   pg = hyperinf::get_plot_graph(cabbage.fit, threshold = 1e-10)
   pgg = pg$plot.graph
+  E(pgg)$label3 = substr(E(pgg)$label, 2, 4)
+  E(pgg)$label3[E(pgg)$Flux < 0.1] = ""
   
   V(pgg)$cat.new = V(pgg)$cat.old = 0
   V(pgg)$cat.new[names(V(pgg)) %in% new.states.obs] = 2
@@ -401,7 +417,8 @@ for(speciesref in 1:2) {
   nudge = 0.14
   embed.g[[speciesref]] =  ggraph(pgg, layout="sugiyama") + 
     geom_edge_link(color="#EEEEEE", 
-                   aes(width=Flux)) +
+                   aes(width=Flux, label=label3), 
+                   label_size=2, label_colour = "#AAAAAA", check_overlap = FALSE) +
     geom_node_point(data = ~subset(.x, cat.old == 1),
                     shape = 19, alpha = 0.5, color = "#FF0000",
                     aes(size = count.old),
@@ -431,8 +448,15 @@ size.scale = scale_size_continuous(
   }
 )
 
+sf = 4
 png("embed-nets.png", width=600*sf, height=250*sf, res=72*sf)
 ggarrange(embed.g[[2]]+size.scale, embed.g[[1]]+size.scale, labels=c("Kp", "Ec"))
+dev.off()
+
+png("embed-nets-past.png", width=800*sf, height=250*sf, res=72*sf)
+ggarrange(embed.g[[3]]+size.scale, embed.g[[2]]+size.scale, 
+          embed.g[[1]]+size.scale, labels=c("Kp historic", "Kp", "Ec"),
+          nrow=1)
 dev.off()
 
 

@@ -6,7 +6,7 @@ library(ggrepel)
 library(ggpubr)
 library(hypermk2)
 
-expt = 1
+expt = 8
 run.mash = FALSE
 run.hmk2 = TRUE
 fname = paste0("eskapee-phylo-fits-", expt, "-", run.hmk2, ".Rdata", collapse="")
@@ -56,6 +56,12 @@ if(expt == 3) {
               "Acinetobacter baumannii", 
               "Enterobacter")
   to.get = 7
+}
+
+# simpler set  
+if(expt == 8) {
+  ESKAPEE = c("Escherichia coli", "Klebsiella pneumoniae")
+  to.get = 10
 }
 
 df$eskapee = df$species
