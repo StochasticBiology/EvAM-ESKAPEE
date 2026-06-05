@@ -20,7 +20,7 @@ expt = 5
 run.hmk2 = TRUE
 plot.hmk2 = FALSE
 run.diagnostics = FALSE
-cov.index = 33
+cov.index = FALSE
 run.dAICs = FALSE
 sf = 4
 
@@ -206,16 +206,24 @@ plot.daic = ggplot(daic.df, aes(x=bug, y=vals, fill=AICtype)) +
   theme_minimal()
 
 
-int.dfs = data.frame()
+int.dfs = int.strong.dfs = data.frame()
 for(i in 1:nexpt) {
   test.daic = daic.df$vals[daic.df$bug == unique(daic.df$bug)[i] & daic.df$AICtype == "HMk2"] - 
     daic.df$vals[daic.df$bug == unique(daic.df$bug)[i] & daic.df$AICtype == "Null"] 
   thresh = test.daic/(ncol(this.pc[[i]]$dAICs)*(ncol(this.pc[[i]]$dAICs)-1) / 2)
-  this.ints = which(this.pc[[i]]$dAICs < test.daic/(ncol(this.pc[[i]]$dAICs)**2 / 2), arr.ind = TRUE)
+  #thresh = test.daic/(ncol(this.pc[[i]]$dAICs)*(ncol(this.pc[[i]]$dAICs)))
+  this.ints = which(this.pc[[i]]$dAICs < thresh, arr.ind = TRUE)
   if(nrow(this.ints) > 0) {
   int.dfs = rbind(int.dfs, data.frame(expt=i, bug = unique(daic.df$bug)[i],
                                       from=this.ints[this.ints[,1]>this.ints[,2],1],
                                       to=this.ints[this.ints[,1]>this.ints[,2],2]))
+  }
+  thresh = test.daic/(ncol(this.pc[[i]]$dAICs))
+  this.ints = which(this.pc[[i]]$dAICs < thresh, arr.ind = TRUE)
+  if(nrow(this.ints) > 0) {
+    int.strong.dfs = rbind(int.strong.dfs, data.frame(expt=i, bug = unique(daic.df$bug)[i],
+                                        from=this.ints[this.ints[,1]>this.ints[,2],1],
+                                        to=this.ints[this.ints[,1]>this.ints[,2],2]))
   }
 }
 int.dfs
@@ -230,8 +238,19 @@ edges <- int.dfs %>%
     .groups = "drop"
   )
 
+edges.strong <- int.strong.dfs %>%
+  group_by(from, to) %>%
+  summarise(
+    label = paste(sort(unique(bug)), collapse = ","),
+    count = n_distinct(bug),
+    .groups = "drop"
+  )
+
 edges$from = drug.names.3[edges$from]
 edges$to = drug.names.3[edges$to]
+
+edges.strong$from = drug.names.3[edges.strong$from]
+edges.strong$to = drug.names.3[edges.strong$to]
 
 # interaction graphs
 
@@ -242,8 +261,20 @@ plot.ints = ggraph(g, layout="stress" ) +
   geom_node_label(aes(label=name)) + theme_void() + theme(legend.position="none")
 plot.ints
 
+g.strong = graph_from_data_frame(edges.strong)
+plot.ints.strong = ggraph(g.strong, layout="stress" ) + 
+  geom_edge_fan(aes(color=factor(count), width = count, label=label), 
+                angle_calc="along", alpha = 0.6, label_alpha = 0.6) +
+  geom_node_label(aes(label=name)) + theme_void() + theme(legend.position="none")
+plot.ints.strong
+
+
 png(fig.name.3, width=600*sf, height=200*sf, res=72*sf)
-ggarrange(plot.daic, plot.ints, nrow=1, labels=c("A", "B"))
+ggarrange(plot.daic, plot.ints.strong, nrow=1, labels=c("A", "B"))
+dev.off()
+
+png(paste0("weak-", fig.name.3, collapse=""), width=300*sf, height=200*sf, res=72*sf)
+print(plot.ints)
 dev.off()
 }
 
@@ -416,3 +447,45 @@ dev.off()
 # Kp imipenem later in Africa than Asia (4 vs 6)
 # Kp ciprof later in Africa than Americas (5 vs 6)
 
+if(expt == 5 & cov.index == 33) {
+  c.set = list(c(4,6))
+  if(FALSE) {
+  c.set = list(c(1,2),
+               c(3,6),
+               c(4,6),
+               c(5,6))
+  }
+  c.width = 800
+  c.height = 480
+  c.nrow = 2
+}
+specific.net.plots = list()
+for(i in 1:length(c.set)) {
+    specific.net.plots[[i]] = plot_hyperinf_comparative(list(fit.hmm.phy[[comp[1]]], fit.hmm.phy[[comp[2]]]), 
+                                                              style="full",
+                                                        label_size = 2,
+                                                        feature.names = substr(fit.hmm.phy[[comp[[1]]]]$feature.names, 1, 3),
+                                                        threshold = 0.1,
+                                                          expt.names = c("Kp Asia", "Kp Africa"))
+    
+  }
+
+ex.comp.plot = specific.net.plots[[1]] + geom_edge_link(alpha = 0, label_size=8, 
+                                         check_overlap = FALSE, aes(
+  label=ifelse(label=="+imi", "*", "")))
+
+png("ex-comp-plot.png", width=300*sf, height=400*sf, res=72*sf)
+print(ex.comp.plot)
+dev.off()
+
+ttables2 = ggarrange(ggarrange(
+  ggtexttable(res.df.2, rows = NULL, theme = my.theme),
+  ggtexttable(res.df.1, rows = NULL, theme = my.theme),
+  nrow=2, labels=c("A i", "ii")), plot.ints, ex.comp.plot, 
+  nrow=1, labels=c("", "B", "C"), widths=c(1,1,1.3)
+)
+ttables2
+
+png("fig-2-ver.png", width=900*sf, height=250*sf, res=72*sf)
+print(ttables2)
+dev.off()
