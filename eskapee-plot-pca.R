@@ -111,15 +111,15 @@ scores_all$label2 = ""
 scores_all$label2[grep("9", scores_all$label)] = scores_all$label[grep("9", scores_all$label)]
 scores_all$label2 <- gsub("[-]*[0-9]+$", "", scores_all$label2)
 
-
-pca.plot.1 = ggplot(scores_all, aes(PC1, PC2)) +
+scores_all_1 = scores_all
+pca.plot.1 = ggplot(scores_all_1, aes(PC1, PC2)) +
   
   # points colored by group type (train vs other)
   geom_point(aes(color = factor(group, levels=c("train", "other"))), size = 2, alpha = 0.7) +
   
   # ellipses by biological/label group
   stat_ellipse(aes(group = group_id, 
-                   fill = factor(group_id, levels = unique(scores_all$group_id))),
+                   fill = factor(group_id, levels = unique(scores_all_1$group_id))),
                geom = "polygon",
                alpha = 0.25,
                color = NA) +
@@ -227,7 +227,7 @@ X_train <- X[train_idx, , drop = FALSE]
 X_other <- X[!train_idx, , drop = FALSE]
 
 pca <- prcomp(X_train, center = TRUE)#, scale. = TRUE)
-var_explained <- pca$sdev^2 / sum(pca$sdev^2)
+var_explained_2 <- pca$sdev^2 / sum(pca$sdev^2)
 
 scores_train <- as.data.frame(pca$x)
 scores_train$label <- rownames(X_train)
@@ -247,15 +247,15 @@ scores_all$label2 = ""
 scores_all$label2[grep("9", scores_all$label)] = scores_all$label[grep("9", scores_all$label)]
 scores_all$label2 <- gsub("[-]*[0-9]+$", "", scores_all$label2)
 
-
-pca.plot.2 = ggplot(scores_all, aes(PC1, PC2)) +
+scores_all_2 = scores_all
+pca.plot.2 = ggplot(scores_all_2, aes(PC1, PC2)) +
   
   # points colored by group type (train vs other)
   geom_point(aes(color = factor(group, levels=c("train", "other"))), size = 2, alpha = 0.7) +
   
   # ellipses by biological/label group
   stat_ellipse(aes(group = group_id, 
-                   fill = factor(group_id, levels = unique(scores_all$group_id))),
+                   fill = factor(group_id, levels = unique(scores_all_2$group_id))),
                geom = "polygon",
                alpha = 0.25,
                color = NA) +
@@ -270,12 +270,12 @@ pca.plot.2 = ggplot(scores_all, aes(PC1, PC2)) +
   guides(fill = "none") +
   scale_colour_manual(values = c(rep("black", 2))) + #, rep("#FFAAAA", 1))) +
   scale_fill_manual(values = c(rep("blue", 6)))   +
-  xlab(sprintf("PC1 (%.1f%%)", 100 * var_explained[1])) +
-  ylab(sprintf("PC2 (%.1f%%)", 100 * var_explained[2])) +
+  xlab(sprintf("PC1 (%.1f%%)", 100 * var_explained_2[1])) +
+  ylab(sprintf("PC2 (%.1f%%)", 100 * var_explained_2[2])) +
   theme(legend.position = "none")
 
 #######
 
-png("pca-plots.png", width=700*sf, height=350*sf, res=72*sf)
+png("pca-plots.png", width=700*sf, height=180*sf, res=72*sf)
 ggarrange(pca.plot.2, pca.plot.1, nrow=1)
 dev.off()
