@@ -8,21 +8,54 @@ library(hypermk2)
 library(igraph)
 library(ggraph)
 
+#### TASK 1: establish experiment and read in data
+#### TASK 2: run diagnostics (HyperHMM vs HyperMk2) if requested [Supp. Fig. 2]
+#### TASK 3: Produce figures summarising a given experiment [Supp. Fig. 1, Fig 1A,B]
+#### TASK 4: explore dAICs and interactions if requested [Fig. 2B and Supp. Fig. 4, for 5/FALSE]
+#### TASK 5: manually curated summary graphic of detected interactions (from task 4 across expts) [Fig 2, Supp Fig 4 for 5/33]
+#### TASK 6: plot dynamic summaries for different experiments [Supp. Figs. 3, 5]
+#### TASK 7: pull together different plots for interactions and covariates [Fig. 2 for 5/33]
+#### TASK 8: produce complete trellis plots for SI figs [Supp. Figs. 1, 2, 3, 5]
+
+# scaling factor for plots
+sf = 4
+# whether to run full interaction analysis for all experiments.
+# the results of (pre-run) experiments are already compiled, and with this FALSE
+# only the set needed to reproduce the main text figure will be run. set to TRUE
+# to reproduce the pre-run experiments (takes several more minutes)
+all.dAICs = FALSE
+
+fig.1a = fig.1b = fig.s1 = fig.s2 = fig.s3 = fig.s5 = list()
+
+#### TASK 1: establish experiment and read in data
+
+# the code reads in the output from a particular pre-run experiment.
+# these (from eskapee-inference.R) are labelled by an integer (determining the set of bugs)
+# and possibly a covariate index determining which covariate to explore
+
+expt.setup = 1
+
+if(expt.setup == 1) {
+  expt = 5; run.hmk2 = TRUE; plot.hmk2 = TRUE; run.diagnostics = TRUE; cov.index = FALSE; run.dAICs = TRUE
+} else if(expt.setup == 2) {
+  expt = 0; run.hmk2 = TRUE; plot.hmk2 = TRUE; run.diagnostics = TRUE; cov.index = FALSE; run.dAICs = all.dAICs
+} else if(expt.setup == 3) {
+  expt = 1; run.hmk2 = FALSE; plot.hmk2 = FALSE; run.diagnostics = FALSE; cov.index = FALSE; run.dAICs = FALSE
+} else if(expt.setup == 4) {
+  expt = 8; run.hmk2 = TRUE; plot.hmk2 = TRUE; run.diagnostics = TRUE; cov.index = FALSE; run.dAICs = all.dAICs
+} else if(expt.setup == 5) {
+  expt = 5; run.hmk2 = TRUE; plot.hmk2 = TRUE; run.diagnostics = FALSE; cov.index = 33; run.dAICs = all.dAICs
+} else if(expt.setup == 6) {
+  expt = 4; run.hmk2 = TRUE; plot.hmk2 = TRUE; run.diagnostics = FALSE; cov.index = 35; run.dAICs = all.dAICs
+}
+
+# the labels are:
 # 5: Ec, Kp, Ab, Pa x 8
 # 0: Ec, Kp, Sa, Ab, Ef, Es x 4
 # 8: Ec, Kp x 10
 # 4: Ec, Kp x 5
 # 1: Ec, Kp x 12
-# pending: 8/TRUE
-# totals so far: 5/TRUE, 0/TRUE, 1/FALSE, 
-# covariates so far: 5/TRUE/33 [geo region]; 4/TRUE/35 [age decade]; 7/TRUE/33 [TB, geo region]
-expt = 5
-run.hmk2 = TRUE
-plot.hmk2 = FALSE
-run.diagnostics = FALSE
-cov.index = FALSE
-run.dAICs = FALSE
-sf = 4
+# covariates so far: 5/TRUE/33 [geo region]; 4/TRUE/35 [age decade]
 
 if(cov.index != FALSE) {
   fname = paste0("eskapee-phylo-fits-", expt, "-cov-", cov.index, "-", run.hmk2, ".Rdata", collapse="")
@@ -48,7 +81,18 @@ if(run.hmk2 == TRUE) {
   fit.mk2 = all.fits$fit.hmk2
 }
 
-################
+if(plot.hmk2 == TRUE) {
+  fit.plot = fit.mk2
+} else {
+  fit.plot = fit.hmm.phy
+}
+
+drug.labels = fit.plot[[1]]$feature.names
+drug.labels
+plot.drugs = ggtexttable(data.frame(Drug=drug.labels))
+
+#### TASK 2: run diagnostics (HyperHMM vs HyperMk2) if requested [Supp. Fig. 2]
+
 if(run.diagnostics == TRUE) {
   fit.list = list()
   fit.names = c()
@@ -66,35 +110,35 @@ if(run.diagnostics == TRUE) {
   
   if(FALSE) {
     plot.d.om = plot_hyperinf_ordering_matrices(c(fit.mk2, fit.hmm.phy), 
-                                              type = "relative",
-                                  expt.names = c(names(fit.mk2),names(fit.hmm.phy)))                                                                            
-  
-  plot.d.om.1 = plot_hyperinf_ordering_matrices(c(fit.mk2, fit.hmm.phy), 
-                                              type = "absolute",
-                                              expt.names = c(names(fit.mk2),names(fit.hmm.phy)))                                                                            
+                                                type = "relative",
+                                                expt.names = c(names(fit.mk2),names(fit.hmm.phy)))                                                                            
+    
+    plot.d.om.1 = plot_hyperinf_ordering_matrices(c(fit.mk2, fit.hmm.phy), 
+                                                  type = "absolute",
+                                                  expt.names = c(names(fit.mk2),names(fit.hmm.phy)))                                                                            
   }
   
   if(FALSE) {
-  plot.d.com.full = plot_hyperinf_comparative(c(fit.mk2, fit.hmm.phy), 
-                                              expt.names = c(names(fit.mk2),names(fit.hmm.phy)),
-                            style = "full",
-                            feature.names = substr(drug.labels, start=1, stop=3)) 
-  
-  
+    plot.d.com.full = plot_hyperinf_comparative(c(fit.mk2, fit.hmm.phy), 
+                                                expt.names = c(names(fit.mk2),names(fit.hmm.phy)),
+                                                style = "full",
+                                                feature.names = substr(drug.labels, start=1, stop=3)) 
+    
+    
     plot.d.com.lim = plot_hyperinf_comparative(c(fit.mk2, fit.hmm.phy), 
-                                              expt.names = c(names(fit.mk2), names(fit.hmm.phy)),
-                                              style = "limited",
-                                              feature.names = substr(drug.labels, start=1, stop=3)) 
+                                               expt.names = c(names(fit.mk2), names(fit.hmm.phy)),
+                                               style = "limited",
+                                               feature.names = substr(drug.labels, start=1, stop=3)) 
   }
   plot.d.com.full.mk2 = plot_hyperinf_comparative(c(fit.mk2), 
-                                              expt.names = c(names(fit.mk2)),
-                                              style = "full",
-                                              feature.names = substr(drug.labels, start=1, stop=3)) 
-  
-  plot.d.com.full.hmm.phy = plot_hyperinf_comparative(c(fit.hmm.phy), 
-                                                  expt.names = c(names(fit.hmm.phy)),
+                                                  expt.names = c(names(fit.mk2)),
                                                   style = "full",
                                                   feature.names = substr(drug.labels, start=1, stop=3)) 
+  
+  plot.d.com.full.hmm.phy = plot_hyperinf_comparative(c(fit.hmm.phy), 
+                                                      expt.names = c(names(fit.hmm.phy)),
+                                                      style = "full",
+                                                      feature.names = substr(drug.labels, start=1, stop=3)) 
   
   fig.name = paste0("eskapee-phylo-diagnostics-", expt, "-trellis.png", collapse="")
   sf = 3
@@ -103,19 +147,12 @@ if(run.diagnostics == TRUE) {
                   plot.d.com.full.mk2, plot.d.com.full.hmm.phy,
                   nrow=2, ncol=2))
   dev.off()
+  fig.s2[[expt.setup]] = plot.d.om
 }
 
-if(plot.hmk2 == TRUE) {
-  fit.plot = fit.mk2
-} else {
-  fit.plot = fit.hmm.phy
-}
 
-drug.labels = fit.plot[[1]]$feature.names
-drug.labels
-plot.drugs = ggtexttable(data.frame(Drug=drug.labels))
 
-################
+#### TASK 3: Produce figures summarising a given experiment 
 
 to.plot = 1:length(fit.plot)
 #to.plot = 1:2
@@ -125,11 +162,11 @@ if(cov.index != FALSE) {
   fig.name.1 = paste0("eskapee-phylo-comparison-mk2-", expt, "-cov-", cov.index, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
   fig.name.2 = paste0("eskapee-phylo-comparison-simple-mk2-", expt, "-cov-", cov.index, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
   fig.name.3 = paste0("eskapee-phylo-comparison-AICs-", expt, "-cov-", cov.index, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
-  fig.name.4 = paste0("eskapee-phylo-comparison-data-", expt, "-cov-", cov.index, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
 } else {
   fig.name.1 = paste0("eskapee-phylo-comparison-mk2-", expt, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
   fig.name.2 = paste0("eskapee-phylo-comparison-simple-mk2-", expt, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
   fig.name.3 = paste0("eskapee-phylo-comparison-AICs-", expt, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
+  fig.name.4 = paste0("eskapee-phylo-comparison-data-", expt, "-", plot.hmk2, "-", fname.index, ".png", collapse="")
 }
 
 plot.om = plot_hyperinf_ordering_matrices(fit.plot[to.plot], 
@@ -137,9 +174,9 @@ plot.om = plot_hyperinf_ordering_matrices(fit.plot[to.plot],
                                           feature.names = substr(drug.labels, start=1, stop=4),
                                           expt.names = get_initials(names(fit.plot)[to.plot]))  
 plot.om.abs = plot_hyperinf_ordering_matrices(fit.plot[to.plot], 
-                                          type = "absolute",
-                                          feature.names = substr(drug.labels, start=1, stop=4),
-                                          expt.names = get_initials(names(fit.plot)[to.plot])) 
+                                              type = "absolute",
+                                              feature.names = substr(drug.labels, start=1, stop=4),
+                                              expt.names = get_initials(names(fit.plot)[to.plot])) 
 plot.net = plot_hyperinf_comparative(fit.plot[to.plot], 
                                      expt.names = get_initials(names(fit.plot)[to.plot]), 
                                      style= "full", threshold = 0.05, bend = 0.25,
@@ -157,6 +194,8 @@ compare.plot = ggarrange( ggarrange(plotlist=data.plots,
                                     labels=get_initials(names(data.set)[to.plot]), nrow=1),
                           ggarrange(ggarrange(plot.om, plot.om.abs, nrow=2),
                                     plot.net), nrow=2, heights=c(1,2))
+fig.1a[[expt.setup]] = plot.net
+fig.1b[[expt.setup]] = plot.om
 
 sf = 2
 png(fig.name.1, width=1000*sf, height=800*sf, res=72*sf)
@@ -172,153 +211,143 @@ if(cov.index == FALSE) {
   png(fig.name.4, width=800*sf, height=800*sf, res=72*sf)
   print( ggarrange(plotlist=data.plots, nrow=1, labels=get_initials(names(data.set)[to.plot])))
   dev.off()
+  fig.s1[[expt.setup]] = ggarrange(plotlist=data.plots, nrow=1, labels=get_initials(names(data.set)[to.plot]))
 }
 
-############## dAICs and interactions
+#### TASK 4: explore dAICs and interactions if requested [Fig. 2B and Supp. Fig. 4, for 5/FALSE]
 
 if(run.dAICs == TRUE) {
-nexpt = length(all.fits$data.set)
-
-this.pc = this.null = this.null.AIC = this.hmk2.AIC = list()
-
-for(i in 1:nexpt) {
-  this.data = all.fits$data.set[[i]]
-  this.tree = all.fits$tree.set[[i]]
-  this.tree$edge.length = abs(this.tree$edge.length)
-  #this.tree$edge.length <- this.tree$edge.length / max(this.tree$edge.length)
-  this.mat = as.matrix(this.data[,2:ncol(this.data)])
-  this.pc[[i]] = phylo_correlations(this.mat, this.tree)
-  this.null[[i]] = hypermk2_independent(this.mat, this.tree)
-  this.null.AIC[[i]] = this.null[[i]]$AIC
-  this.hmk2.AIC[[i]] = all.fits$fit.hmk2[[i]]$fitted_mk$AIC
-  c(this.null.AIC, this.hmk2.AIC)
-} 
-
-
-# delta AICs for null model comparison
-daic.df = data.frame(bug=get_initials(names(all.fits$fit.hmk2)[rep(1:nexpt, 2)]),
-                     AICtype = rep(c("Null", "HMk2"), each=nexpt),
-                     vals=c(unlist(this.null.AIC), unlist(this.hmk2.AIC)))
-
-plot.daic = ggplot(daic.df, aes(x=bug, y=vals, fill=AICtype)) + 
-  geom_col(position="dodge") + scale_y_log10() +
-  labs(x = "Species", y = "AIC", fill = "Model") +
-  theme_minimal()
-
-
-int.dfs = int.strong.dfs = data.frame()
-for(i in 1:nexpt) {
-  test.daic = daic.df$vals[daic.df$bug == unique(daic.df$bug)[i] & daic.df$AICtype == "HMk2"] - 
-    daic.df$vals[daic.df$bug == unique(daic.df$bug)[i] & daic.df$AICtype == "Null"] 
-  thresh = test.daic/(ncol(this.pc[[i]]$dAICs)*(ncol(this.pc[[i]]$dAICs)-1) / 2)
-  #thresh = test.daic/(ncol(this.pc[[i]]$dAICs)*(ncol(this.pc[[i]]$dAICs)))
-  this.ints = which(this.pc[[i]]$dAICs < thresh, arr.ind = TRUE)
-  if(nrow(this.ints) > 0) {
-  int.dfs = rbind(int.dfs, data.frame(expt=i, bug = unique(daic.df$bug)[i],
-                                      from=this.ints[this.ints[,1]>this.ints[,2],1],
-                                      to=this.ints[this.ints[,1]>this.ints[,2],2]))
+  nexpt = length(all.fits$data.set)
+  
+  this.pc = this.null = this.null.AIC = this.hmk2.AIC = list()
+  
+  for(i in 1:nexpt) {
+    this.data = all.fits$data.set[[i]]
+    this.tree = all.fits$tree.set[[i]]
+    this.tree$edge.length = abs(this.tree$edge.length)
+    #this.tree$edge.length <- this.tree$edge.length / max(this.tree$edge.length)
+    this.mat = as.matrix(this.data[,2:ncol(this.data)])
+    this.pc[[i]] = phylo_correlations(this.mat, this.tree)
+    this.null[[i]] = hypermk2_independent(this.mat, this.tree)
+    this.null.AIC[[i]] = this.null[[i]]$AIC
+    this.hmk2.AIC[[i]] = all.fits$fit.hmk2[[i]]$fitted_mk$AIC
+    c(this.null.AIC, this.hmk2.AIC)
+  } 
+  
+  
+  # delta AICs for null model comparison
+  daic.df = data.frame(bug=get_initials(names(all.fits$fit.hmk2)[rep(1:nexpt, 2)]),
+                       AICtype = rep(c("Null", "HMk2"), each=nexpt),
+                       vals=c(unlist(this.null.AIC), unlist(this.hmk2.AIC)))
+  
+  plot.daic = ggplot(daic.df, aes(x=bug, y=vals, fill=AICtype)) + 
+    geom_col(position="dodge") + scale_y_log10() +
+    labs(x = "Species", y = "AIC", fill = "Model") +
+    theme_minimal()
+  
+  # identify which dAICs correspond to likely interactionss
+  int.dfs = int.strong.dfs = data.frame()
+  for(i in 1:nexpt) {
+    ndrug = ncol(this.pc[[i]]$dAICs)
+    # weaker evidence: dAIC < 1 per drug pair 
+    test.daic = daic.df$vals[daic.df$bug == unique(daic.df$bug)[i] & daic.df$AICtype == "HMk2"] - 
+      daic.df$vals[daic.df$bug == unique(daic.df$bug)[i] & daic.df$AICtype == "Null"] 
+    thresh = test.daic/(ndrug*(ndrug-1) / 2)
+    #thresh = test.daic/(ncol(this.pc[[i]]$dAICs)*(ncol(this.pc[[i]]$dAICs)))
+    this.ints = which(this.pc[[i]]$dAICs < thresh, arr.ind = TRUE)
+    if(nrow(this.ints) > 0) {
+      int.dfs = rbind(int.dfs, data.frame(expt=i, bug = unique(daic.df$bug)[i],
+                                          from=this.ints[this.ints[,1]>this.ints[,2],1],
+                                          to=this.ints[this.ints[,1]>this.ints[,2],2]))
+    }
+    # stronger evidence: dAIC < 1 per drug
+    thresh = test.daic/ndrug
+    this.ints = which(this.pc[[i]]$dAICs < thresh, arr.ind = TRUE)
+    if(nrow(this.ints) > 0) {
+      int.strong.dfs = rbind(int.strong.dfs, data.frame(expt=i, bug = unique(daic.df$bug)[i],
+                                                        from=this.ints[this.ints[,1]>this.ints[,2],1],
+                                                        to=this.ints[this.ints[,1]>this.ints[,2],2]))
+    }
   }
-  thresh = test.daic/(ncol(this.pc[[i]]$dAICs))
-  this.ints = which(this.pc[[i]]$dAICs < thresh, arr.ind = TRUE)
-  if(nrow(this.ints) > 0) {
-    int.strong.dfs = rbind(int.strong.dfs, data.frame(expt=i, bug = unique(daic.df$bug)[i],
-                                        from=this.ints[this.ints[,1]>this.ints[,2],1],
-                                        to=this.ints[this.ints[,1]>this.ints[,2],2]))
-  }
+  int.dfs
+  drug.names = colnames(this.pc[[i]]$dAICs)
+  drug.names.3 = substr(drug.names, 1, 3)
+  
+  edges <- int.dfs %>%
+    group_by(from, to) %>%
+    summarise(
+      label = paste(sort(unique(bug)), collapse = ","),
+      count = n_distinct(bug),
+      .groups = "drop"
+    )
+  
+  edges.strong <- int.strong.dfs %>%
+    group_by(from, to) %>%
+    summarise(
+      label = paste(sort(unique(bug)), collapse = ","),
+      count = n_distinct(bug),
+      .groups = "drop"
+    )
+  
+  edges$from = drug.names.3[edges$from]
+  edges$to = drug.names.3[edges$to]
+  
+  edges.strong$from = drug.names.3[edges.strong$from]
+  edges.strong$to = drug.names.3[edges.strong$to]
+  
+  # produce interaction graphs
+  
+  g = graph_from_data_frame(edges[edges$count>1,])
+  plot.ints = ggraph(g, layout="stress" ) + 
+    geom_edge_fan(aes(color=factor(count), width = count, label=label), 
+                  angle_calc="along", alpha = 0.6, label_alpha = 0.6) +
+    geom_node_label(aes(label=name)) + theme_void() + theme(legend.position="none")
+  plot.ints
+  
+  g.strong = graph_from_data_frame(edges.strong)
+  plot.ints.strong = ggraph(g.strong, layout="stress" ) + 
+    geom_edge_fan(aes(color=factor(count), width = count, label=label), 
+                  angle_calc="along", alpha = 0.6, label_alpha = 0.6) +
+    geom_node_label(aes(label=name)) + theme_void() + theme(legend.position="none")
+  plot.ints.strong
+  
+  png(fig.name.3, width=600*sf, height=200*sf, res=72*sf)
+  ggarrange(plot.daic, plot.ints.strong, nrow=1, labels=c("A", "B"))
+  dev.off()
+  
+  png(paste0("weak-", fig.name.3, collapse=""), width=300*sf, height=200*sf, res=72*sf)
+  print(plot.ints)
+  dev.off()
+  
+  
+  test.daic = daic.df$vals[daic.df$bug == "Ec" & daic.df$AICtype == "HMk2"] - 
+    daic.df$vals[daic.df$bug == "Ec" & daic.df$AICtype == "Null"] 
+  
+  this.pc[[1]]$dAICs 
+  
+  this.ints.df <- as.data.frame(this.pc[[1]]$dAICs) %>%
+    mutate(drug1 = rownames(.)) %>%
+    pivot_longer(-drug1, names_to = "drug2", values_to = "dAIC") %>%
+    filter(!is.na(dAIC), dAIC < 0) %>%
+    # remove duplicate pairs (since matrix is symmetric)
+    rowwise() %>%
+    mutate(pair = paste(sort(c(drug1, drug2)), collapse = "_")) %>%
+    ungroup() %>%
+    distinct(pair, .keep_all = TRUE) %>%
+    arrange(dAIC)  # most negative first
+  
+  
+  # ^ issues with 1e100 values
+  
+  this.null$by.feature[[1]]$fitted_mk$AIC
+  this.null$by.feature[[2]]$fitted_mk$AIC
+  this.null$by.feature[[3]]$fitted_mk$AIC
+  this.null$by.feature[[4]]$fitted_mk$AIC
+  this.null$by.feature[[5]]$fitted_mk$AIC
+  this.null$by.feature[[6]]$fitted_mk$AIC
 }
-int.dfs
-drug.names = colnames(this.pc[[i]]$dAICs)
-drug.names.3 = substr(drug.names, 1, 3)
 
-edges <- int.dfs %>%
-  group_by(from, to) %>%
-  summarise(
-    label = paste(sort(unique(bug)), collapse = ","),
-    count = n_distinct(bug),
-    .groups = "drop"
-  )
-
-edges.strong <- int.strong.dfs %>%
-  group_by(from, to) %>%
-  summarise(
-    label = paste(sort(unique(bug)), collapse = ","),
-    count = n_distinct(bug),
-    .groups = "drop"
-  )
-
-edges$from = drug.names.3[edges$from]
-edges$to = drug.names.3[edges$to]
-
-edges.strong$from = drug.names.3[edges.strong$from]
-edges.strong$to = drug.names.3[edges.strong$to]
-
-# interaction graphs
-
-g = graph_from_data_frame(edges[edges$count>1,])
-plot.ints = ggraph(g, layout="stress" ) + 
-  geom_edge_fan(aes(color=factor(count), width = count, label=label), 
-                angle_calc="along", alpha = 0.6, label_alpha = 0.6) +
-  geom_node_label(aes(label=name)) + theme_void() + theme(legend.position="none")
-plot.ints
-
-g.strong = graph_from_data_frame(edges.strong)
-plot.ints.strong = ggraph(g.strong, layout="stress" ) + 
-  geom_edge_fan(aes(color=factor(count), width = count, label=label), 
-                angle_calc="along", alpha = 0.6, label_alpha = 0.6) +
-  geom_node_label(aes(label=name)) + theme_void() + theme(legend.position="none")
-plot.ints.strong
-
-
-png(fig.name.3, width=600*sf, height=200*sf, res=72*sf)
-ggarrange(plot.daic, plot.ints.strong, nrow=1, labels=c("A", "B"))
-dev.off()
-
-png(paste0("weak-", fig.name.3, collapse=""), width=300*sf, height=200*sf, res=72*sf)
-print(plot.ints)
-dev.off()
-}
-
-tmp.cols = c("Bacteria", "Covariate levels", "Earlier")
-tmp.mat = matrix(c(
-  "Ec", "Asia vs America", "tob",
-"Kp", "Africa vs Europe", "gen",
-"Kp", "Asia vs Africa", "imi",
-"Kp", "Americas vs Africa", "cip",
-"Ec", "0-10 vs 80+", "tri",
-"Kp", "40-50 vs 50-60, 60-70, 70-80, 80+", "tri"),
-byrow = TRUE, ncol=3)
-res.df.1 = as.data.frame(tmp.mat)
-colnames(res.df.1) = tmp.cols
-
-tmp.cols = c("Bacteria", "Earlier", "Later")
-tmp.mat = matrix(c(
-"Kp vs Ec", "amp", "",
-"Ab vs Ef", "gen (before cip)", "",
-"Ec vs Pa", "tob, cip", "mer, imi",
-"Kp vs Pa", "cip", "mer, imi",
-"Ab vs Pa", "gen, ami", "mer, imi"),
-byrow = TRUE, ncol=3)
-res.df.2 = as.data.frame(tmp.mat)
-colnames(res.df.2) = tmp.cols
-
-my.theme = ttheme(base_size=8, 
-                  tbody.style = tbody_style(size=8, fill = c("#CCCCFF", "#EEEEFF")))
-
-ttables = ggarrange(plot.ints, ggarrange(
-ggtexttable(res.df.2, rows = NULL, theme = my.theme),
-ggtexttable(res.df.1, rows = NULL, theme = my.theme),
-nrow=2, labels=c("B i", "ii")),
-nrow=1, labels=c("A", "")
-)
-ttables
-
-png("fig-2.png", width=600*sf, height=250*sf, res=72*sf)
-print(ttables)
-dev.off()
-
-png("fig-daics.png", width=300*sf, height=200*sf, res=72*sf)
-print(plot.daic)
-dev.off()
+#### TASK 5: manually curated summary graphic of detected interactions (from task 4 across expts) [Fig 2, Supp Fig 4 for 5/33]
 
 # from individual results:
 #in 4-35: [Ec up to 8, Kp up to 14]
@@ -337,41 +366,51 @@ dev.off()
 # Kp imipenem later in Africa than Asia (4 vs 6)
 # Kp ciprof later in Africa than Americas (5 vs 6)
 
+if(expt == 5 & cov.index == 33) {
+  tmp.cols = c("Bacteria", "Covariate levels", "Earlier")
+  tmp.mat = matrix(c(
+    "Ec", "Asia vs America", "tob",
+    "Kp", "Africa vs Europe", "gen",
+    "Kp", "Asia vs Africa", "imi",
+    "Kp", "Americas vs Africa", "cip",
+    "Ec", "0-10 vs 80+", "tri",
+    "Kp", "40-50 vs 50-60, 60-70, 70-80, 80+", "tri"),
+    byrow = TRUE, ncol=3)
+  res.df.1 = as.data.frame(tmp.mat)
+  colnames(res.df.1) = tmp.cols
+  
+  tmp.cols = c("Bacteria", "Earlier", "Later")
+  tmp.mat = matrix(c(
+    "Kp vs Ec", "amp", "",
+    "Ab vs Ef", "gen (before cip)", "",
+    "Ec vs Pa", "tob, cip", "mer, imi",
+    "Kp vs Pa", "cip", "mer, imi",
+    "Ab vs Pa", "gen, ami", "mer, imi"),
+    byrow = TRUE, ncol=3)
+  res.df.2 = as.data.frame(tmp.mat)
+  colnames(res.df.2) = tmp.cols
+  
+  my.theme = ttheme(base_size=8, 
+                    tbody.style = tbody_style(size=8, fill = c("#CCCCFF", "#EEEEFF")))
+  
+  ttables = ggarrange(plot.ints, ggarrange(
+    ggtexttable(res.df.2, rows = NULL, theme = my.theme),
+    ggtexttable(res.df.1, rows = NULL, theme = my.theme),
+    nrow=2, labels=c("B i", "ii")),
+    nrow=1, labels=c("A", "")
+  )
+  ttables
+  
+  png("fig-2.png", width=600*sf, height=250*sf, res=72*sf)
+  print(ttables)
+  dev.off()
+  
+  png("fig-daics.png", width=300*sf, height=200*sf, res=72*sf)
+  print(plot.daic)
+  dev.off()
+}
 
-covars = data.frame()
-###########
-
-
-test.daic = daic.df$vals[daic.df$bug == "Ec" & daic.df$AICtype == "HMk2"] - 
-  daic.df$vals[daic.df$bug == "Ec" & daic.df$AICtype == "Null"] 
-
-this.pc[[1]]$dAICs 
-
-this.ints.df <- as.data.frame(this.pc[[1]]$dAICs) %>%
-  mutate(drug1 = rownames(.)) %>%
-  pivot_longer(-drug1, names_to = "drug2", values_to = "dAIC") %>%
-  filter(!is.na(dAIC), dAIC < 0) %>%
-  # remove duplicate pairs (since matrix is symmetric)
-  rowwise() %>%
-  mutate(pair = paste(sort(c(drug1, drug2)), collapse = "_")) %>%
-  ungroup() %>%
-  distinct(pair, .keep_all = TRUE) %>%
-  arrange(dAIC)  # most negative first
-
-
-# ^ issues with 1e100 values
-
-this.null$by.feature[[1]]$fitted_mk$AIC
-this.null$by.feature[[2]]$fitted_mk$AIC
-this.null$by.feature[[3]]$fitted_mk$AIC
-this.null$by.feature[[4]]$fitted_mk$AIC
-this.null$by.feature[[5]]$fitted_mk$AIC
-this.null$by.feature[[6]]$fitted_mk$AIC
-
-i = 1
-plot_hyperinf_data(all.fits$data.set[[i]], all.fits$tree.set[[i]])
-
-##############
+#### TASK 6: plot dynamic summaries for different experiments [Supp. Figs. 3, 5]
 
 c.height = 240
 c.nrow = 1
@@ -413,16 +452,20 @@ specific.plots = list()
 for(i in 1:length(c.set)) {
   comp = c.set[[i]]
   if(cov.index == FALSE) {
-specific.plots[[i]] = plot_hyperinf_compare_orderings(fit.hmm.phy[[comp[1]]], fit.hmm.phy[[comp[2]]], 
-                                thetastep = 3,
-                                expt.names = get_initials(names(data.set)[c(comp[1],comp[2])]))
+    specific.plots[[i]] = plot_hyperinf_compare_orderings(fit.hmm.phy[[comp[1]]], fit.hmm.phy[[comp[2]]], 
+                                                          thetastep = 3,
+                                                          expt.names = get_initials(names(data.set)[c(comp[1],comp[2])])) +
+      scale_x_continuous(breaks = seq(1, fit.hmm.phy[[comp[1]]]$L, by = 1))
+    fig.s3[[length(fig.s3)+1]] = specific.plots[[i]]
   }
   else {
     specific.plots[[i]] = plot_hyperinf_compare_orderings(fit.hmm.phy[[comp[1]]], fit.hmm.phy[[comp[2]]], 
                                                           thetastep = 3,
-                                                          expt.names = names(data.set)[c(comp[1],comp[2])])
-    
+                                                          expt.names = names(data.set)[c(comp[1],comp[2])]) +
+      scale_x_continuous(breaks = seq(1, fit.hmm.phy[[comp[1]]]$L, by = 1))
+    fig.s5[[length(fig.s5)+1]] = specific.plots[[i]]
   }
+  
 }
 fname.specific = paste0("specific-plots-", expt, "-", cov.index, ".png")
 png(fname.specific, width=c.width*sf, height=c.height*sf, res=72*sf)
@@ -430,62 +473,77 @@ print(ggarrange(plotlist=specific.plots, nrow=c.nrow,
                 ncol = ceiling(length(specific.plots)/c.nrow)))
 dev.off()
 
-# from HyperHMM:
-# in 4-35: [Ec up to 8, Kp up to 14]
-# Ec bactrim earlier in 0 decade than 80 decade (3 vs 7)
-# Kp bactrim earlier in 40 than in 50, 60, 70, 80 (9,10,11,13 vs 12) ; not used in older patients
-# in 1-FALSE:
-# Kp amp early vs Ec (1 vs 2)
-# in 0-FALSE:
-# Ab genta before cipro; Ef cipro before genta (4 vs 5)
-# in 5-FALSE:
-# Ec tob early, mero late, imi late, cipro early vs Pa (1 vs 4)
-# Kp mero late, imi late, cipro early vs Pa (2 vs 4)
-# Ab mero late, imi late, genta early, ami early vs Pa (3 vs 4)
-# in 5-33: E coli tobramycin earlier in Asia than Americas (1 vs 2)
-# Kp gentamicin later in Europe than Africa (3 vs 6)
-# Kp imipenem later in Africa than Asia (4 vs 6)
-# Kp ciprof later in Africa than Americas (5 vs 6)
+#### TASK 7: pull together different plots for interactions and covariates [Fig. 2 for 5/33]
 
 if(expt == 5 & cov.index == 33) {
   c.set = list(c(4,6))
   if(FALSE) {
-  c.set = list(c(1,2),
-               c(3,6),
-               c(4,6),
-               c(5,6))
+    c.set = list(c(1,2),
+                 c(3,6),
+                 c(4,6),
+                 c(5,6))
   }
   c.width = 800
   c.height = 480
   c.nrow = 2
-}
-specific.net.plots = list()
-for(i in 1:length(c.set)) {
+  
+  specific.net.plots = list()
+  for(i in 1:length(c.set)) {
     specific.net.plots[[i]] = plot_hyperinf_comparative(list(fit.hmm.phy[[comp[1]]], fit.hmm.phy[[comp[2]]]), 
-                                                              style="full",
+                                                        style="full",
                                                         label_size = 2,
                                                         feature.names = substr(fit.hmm.phy[[comp[[1]]]]$feature.names, 1, 3),
                                                         threshold = 0.1,
-                                                          expt.names = c("Kp Asia", "Kp Africa"))
+                                                        expt.names = c("Kp Asia", "Kp Africa"))
     
   }
+  
+  ex.comp.plot = specific.net.plots[[1]] + geom_edge_link(alpha = 0, label_size=8, 
+                                                          check_overlap = FALSE, aes(
+                                                            label=ifelse(label=="+imi", "*", "")))
+  
+  png("ex-comp-plot.png", width=300*sf, height=400*sf, res=72*sf)
+  print(ex.comp.plot)
+  dev.off()
+  
+  ttables2 = ggarrange(ggarrange(
+    ggtexttable(res.df.2, rows = NULL, theme = my.theme),
+    ggtexttable(res.df.1, rows = NULL, theme = my.theme),
+    nrow=2, labels=c("A i", "ii")), plot.ints, ex.comp.plot, 
+    nrow=1, labels=c("", "B", "C"), widths=c(1,1,1.3)
+  )
+  ttables2
+  
+  png("fig-2-ver.png", width=900*sf, height=250*sf, res=72*sf)
+  print(ttables2)
+  dev.off()
+}
 
-ex.comp.plot = specific.net.plots[[1]] + geom_edge_link(alpha = 0, label_size=8, 
-                                         check_overlap = FALSE, aes(
-  label=ifelse(label=="+imi", "*", "")))
+#### TASK 8: produce complete trellis plots for SI figs [Supp. Figs. 1, 2, 3, 5]
 
-png("ex-comp-plot.png", width=300*sf, height=400*sf, res=72*sf)
-print(ex.comp.plot)
+png("compile-fig-s1.png", width=1200*sf, height=1200*sf, res=72*sf)
+ggarrange(fig.s1[[4]] + theme(plot.margin = margin(t = 20, r = 5, b = 5, l = 5)),
+          fig.s1[[1]] + theme(plot.margin = margin(t = 20, r = 5, b = 5, l = 5)),
+          fig.s1[[2]] + theme(plot.margin = margin(t = 20, r = 5, b = 5, l = 5)), 
+          labels=c("A", "B", "C"))
 dev.off()
 
-ttables2 = ggarrange(ggarrange(
-  ggtexttable(res.df.2, rows = NULL, theme = my.theme),
-  ggtexttable(res.df.1, rows = NULL, theme = my.theme),
-  nrow=2, labels=c("A i", "ii")), plot.ints, ex.comp.plot, 
-  nrow=1, labels=c("", "B", "C"), widths=c(1,1,1.3)
-)
-ttables2
+png("compile-fig-s2.png", width=1200*sf, height=800*sf, res=72*sf)
+ggarrange(fig.s2[[4]],
+          fig.s2[[1]],
+          fig.s2[[2]],
+          labels=c("A", "B", "C"))
+dev.off()
 
-png("fig-2-ver.png", width=900*sf, height=250*sf, res=72*sf)
-print(ttables2)
+png("compile-fig-s3.png", width=1200*sf, height=800*sf, res=72*sf)
+ggarrange(ggarrange(plotlist = fig.s3[1:3], nrow=1),
+          ggarrange(plotlist = fig.s3[4:5], nrow=1, labels=c("B", "C")),
+          nrow=2, labels=c("A", ""))
+dev.off()
+
+png("compile-fig-s5.png", width=1000*sf, height=1200*sf, res=72*sf)
+ggarrange(ggarrange(plotlist = fig.s5[1:4]),
+          ggarrange(plotlist = fig.s5[5:9], ncol=2, nrow=3),
+          nrow = 2,
+          heights = c(1, 1.5), labels = c("A", "B"))
 dev.off()
