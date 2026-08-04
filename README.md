@@ -13,7 +13,7 @@ Various evolutionary accumulation modelling approaches for comparing MDR evoluti
 
 For example, `eskapee-phylo-fits-4-cov-35-TRUE.Rdata` is covariate 35 (geographical region) for experiment 4 (the 5 top drugs in Ec and Kp), including a HyperMk2 run. Output files will be labelled with this same pattern, with a final appended integer saying how many elements of the full experiment were included (in case we just want to look at a subset of bugs, for example).
 
-`tanzania-steps.R` pulls newly-phenotyped data from the source Excel file and uses the fitted models from the inference code to compare these observations against predictions.
+`tanzania-steps.R` pulls newly-phenotyped data from the original source Excel file `tanzania-phenotypes.xlsx` and uses the fitted models from the inference code to compare these observations against predictions. A cleaned version of these data post-curation is in `new-phenotypes-clean.csv`.
 
 `eskapee-plotting.R` produces most manuscript plots (Fig 1AB, Fig 2, Supp. Figs. 1, 2, 3, 4, 5). `eskapee-plot-pca.R` produces Fig. 1C; `tanzania-steps.R` produces Fig 3.
 
