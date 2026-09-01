@@ -1,7 +1,7 @@
 # EvAM-ESKAPEE
 Evolutionary accumulation modelling for AMR in ESKAPEE pathogens
 
-For old dev content, see `old-versions`.
+<img width="2789" height="1476" alt="image" src="https://github.com/user-attachments/assets/ffca658e-6a71-4e19-b3e9-7efab850df2f" />
 
 Uses hyperinf https://github.com/StochasticBiology/hyperinf including HyperMk2 and HyperHMM. Also uses `ncbi-genome-download` and `mash`, and pulls data from the CABBAGE database.
 
@@ -17,6 +17,7 @@ For example, `eskapee-phylo-fits-4-cov-35-TRUE.Rdata` is covariate 35 (geographi
 
 `eskapee-plotting.R` produces most manuscript plots (Fig 1AB, Fig 2, Supp. Figs. 1, 2, 3, 4, 5). `eskapee-plot-pca.R` produces Fig. 1C; `tanzania-steps.R` produces Fig 3.
 
+For old dev content, see `old-versions`.
 
 References
 -----
